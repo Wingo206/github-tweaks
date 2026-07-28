@@ -3,6 +3,22 @@
 }
 
 #pr-file-tree
+  li.ght-pr-tree-row--viewed
+  > .PRIVATE_TreeView-item-container {
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+#pr-file-tree
+  li.ght-pr-tree-row--viewed:hover
+  > .PRIVATE_TreeView-item-container,
+#pr-file-tree
+  li.ght-pr-tree-row--viewed:focus-within
+  > .PRIVATE_TreeView-item-container {
+  opacity: 0.75;
+}
+
+#pr-file-tree
   .PRIVATE_TreeView-item-content:has(> .ght-pr-metadata)
   .PRIVATE_TreeView-item-content-text {
   min-width: 0;

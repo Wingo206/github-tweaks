@@ -143,6 +143,7 @@ Before releasing a change:
 - open a private PR and verify every file receives counts immediately
 - check a PR with more than 100 files to exercise pagination
 - toggle Viewed from the sidebar and from GitHub's native control
+- confirm folder line counts decrease as descendant files are viewed
 - force a mutation failure and confirm optimistic rollback and local feedback
 - filter files and confirm directory totals still cover all descendants
 - inspect collapsed and expanded directories

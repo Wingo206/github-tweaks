@@ -52,9 +52,9 @@ describe('pull request sidebar model', () => {
     ).toBeNull();
   });
 
-  it('aggregates all descendants and counts dismissed as unviewed', () => {
+  it('aggregates line counts from unviewed descendants only', () => {
     expect(aggregateFolder('src', snapshot.files)).toEqual({
-      additions: 8,
+      additions: 5,
       deletions: 2,
       viewed: 1,
       total: 2,

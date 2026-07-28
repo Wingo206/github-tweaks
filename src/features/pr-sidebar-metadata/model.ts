@@ -24,8 +24,12 @@ export function aggregateFolder(
 
   return descendants.reduce<FolderAggregate>(
     (aggregate, file) => ({
-      additions: aggregate.additions + file.additions,
-      deletions: aggregate.deletions + file.deletions,
+      additions:
+        aggregate.additions +
+        (isViewed(file.viewedState) ? 0 : file.additions),
+      deletions:
+        aggregate.deletions +
+        (isViewed(file.viewedState) ? 0 : file.deletions),
       viewed: aggregate.viewed + (isViewed(file.viewedState) ? 1 : 0),
       total: aggregate.total + 1,
     }),

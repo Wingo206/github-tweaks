@@ -5,6 +5,7 @@ import type {
 import { aggregateFolder, isViewed } from './model';
 
 const METADATA_ATTRIBUTE = 'data-ght-pr-metadata';
+const VIEWED_ROW_CLASS = 'ght-pr-tree-row--viewed';
 const numberFormatter = new Intl.NumberFormat();
 
 export interface SidebarCallbacks {
@@ -38,6 +39,8 @@ export class SidebarRenderer {
         const aggregate = aggregateFolder(path, snapshot.files);
         if (aggregate.total > 0) {
           this.renderFolderRow(row, aggregate);
+        } else {
+          row.classList.remove(VIEWED_ROW_CLASS);
         }
       }
     }
@@ -78,9 +81,13 @@ export class SidebarRenderer {
     document
       .querySelectorAll(`[${METADATA_ATTRIBUTE}]`)
       .forEach((element) => element.remove());
+    document
+      .querySelectorAll(`.${VIEWED_ROW_CLASS}`)
+      .forEach((element) => element.classList.remove(VIEWED_ROW_CLASS));
   }
 
   private renderFileRow(row: HTMLElement, file: PullRequestFile): void {
+    row.classList.toggle(VIEWED_ROW_CLASS, isViewed(file.viewedState));
     const container = findContentContainer(row);
     if (!container) {
       return;
@@ -131,6 +138,11 @@ export class SidebarRenderer {
     row: HTMLElement,
     aggregate: ReturnType<typeof aggregateFolder>,
   ): void {
+    row.classList.toggle(
+      VIEWED_ROW_CLASS,
+      aggregate.viewed === aggregate.total ||
+        (aggregate.additions === 0 && aggregate.deletions === 0),
+    );
     const container = findContentContainer(row);
     if (!container) {
       return;
@@ -153,7 +165,17 @@ export class SidebarRenderer {
       '.ght-pr-metadata__counts',
     );
     if (counts) {
-      renderCounts(counts, aggregate.additions, aggregate.deletions);
+      renderCounts(
+        counts,
+        aggregate.additions,
+        aggregate.deletions,
+        'No remaining changes in unviewed files',
+      );
+      counts.title = 'Remaining changes in unviewed files';
+      counts.setAttribute(
+        'aria-label',
+        `${aggregate.additions} additions and ${aggregate.deletions} deletions remaining in unviewed files`,
+      );
     }
 
     const progress = metadata.querySelector<HTMLElement>(
@@ -252,13 +274,14 @@ function renderCounts(
   container: HTMLElement,
   additions: number,
   deletions: number,
+  zeroTitle = 'Line counts unavailable',
 ): void {
   container.replaceChildren();
   if (additions === 0 && deletions === 0) {
     const unavailable = document.createElement('span');
     unavailable.className = 'ght-pr-metadata__unavailable';
     unavailable.textContent = '—';
-    unavailable.title = 'Line counts unavailable';
+    unavailable.title = zeroTitle;
     container.append(unavailable);
     return;
   }

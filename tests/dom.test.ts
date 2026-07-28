@@ -66,6 +66,8 @@ describe('GitHub DOM adapter and renderer', () => {
     expect(
       binaryRow.querySelector<HTMLInputElement>('input')?.checked,
     ).toBe(true);
+    expect(binaryRow.classList.contains('ght-pr-tree-row--viewed')).toBe(true);
+    expect(fileRow.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
 
     const folder = document.getElementById('src')!;
     expect(
@@ -80,6 +82,20 @@ describe('GitHub DOM adapter and renderer', () => {
     expect(
       folder.querySelector('.ght-pr-metadata__progress')?.textContent,
     ).toBe('1/2');
+    expect(folder.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
+
+    renderer.render({
+      ...snapshot,
+      files: snapshot.files.map((file) => ({
+        ...file,
+        viewedState: 'VIEWED' as const,
+      })),
+    });
+    expect(folder.classList.contains('ght-pr-tree-row--viewed')).toBe(true);
+
+    renderer.clear();
+    expect(binaryRow.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
+    expect(folder.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
   });
 
   it('emits sidebar checkbox changes', () => {
