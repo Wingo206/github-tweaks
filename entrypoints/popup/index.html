@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Tweaks</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main>
+      <h1>GitHub Tweaks</h1>
+
+      <section aria-labelledby="token-heading">
+        <h2 id="token-heading">GitHub token</h2>
+        <p class="hint">
+          Use one fine-grained token for the repositories under a single
+          resource owner. It needs <strong>Pull requests: read and write</strong>.
+        </p>
+        <form id="token-form">
+          <label for="token">Personal access token</label>
+          <div class="token-row">
+            <input
+              id="token"
+              name="token"
+              type="password"
+              autocomplete="off"
+              placeholder="github_pat_…"
+              required
+            >
+            <button type="submit">Save</button>
+          </div>
+        </form>
+        <div class="actions">
+          <a
+            href="https://github.com/settings/personal-access-tokens/new"
+            target="_blank"
+            rel="noreferrer"
+          >Create token</a>
+          <button id="remove-token" class="link-button" type="button">
+            Remove saved token
+          </button>
+        </div>
+        <p id="auth-status" class="status" role="status"></p>
+      </section>
+
+      <section aria-labelledby="page-heading">
+        <h2 id="page-heading">Current page</h2>
+        <p id="page-status" class="status">Checking…</p>
+        <button id="retry-page" type="button">Retry metadata</button>
+      </section>
+
+      <p id="error" class="error" role="alert" hidden></p>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

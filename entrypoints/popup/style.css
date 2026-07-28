@@ -1,0 +1,139 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+  margin: 0;
+  width: 340px;
+}
+
+main {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+}
+
+h2 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+section {
+  border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  padding-top: 12px;
+}
+
+.hint {
+  color: GrayText;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.token-row {
+  display: flex;
+  gap: 6px;
+}
+
+input {
+  background: Field;
+  border: 1px solid color-mix(in srgb, CanvasText 30%, transparent);
+  border-radius: 6px;
+  color: FieldText;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+}
+
+button {
+  background: #1f883d;
+  border: 1px solid rgba(31, 35, 40, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+a,
+.link-button {
+  color: #0969da;
+  font-weight: 400;
+}
+
+.link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.status {
+  color: GrayText;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+.status[data-state="success"] {
+  color: #1a7f37;
+}
+
+.status[data-state="error"],
+.error {
+  color: #cf222e;
+}
+
+.error {
+  background: color-mix(in srgb, #cf222e 10%, Canvas);
+  border: 1px solid color-mix(in srgb, #cf222e 40%, transparent);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  a,
+  .link-button {
+    color: #58a6ff;
+  }
+
+  .status[data-state="success"] {
+    color: #3fb950;
+  }
+
+  .status[data-state="error"],
+  .error {
+    color: #ff7b72;
+  }
+}

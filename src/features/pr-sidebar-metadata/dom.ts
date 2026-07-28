@@ -1,0 +1,290 @@
+import type {
+  PullRequestFile,
+  PullRequestFilesSnapshot,
+} from '../../shared/types';
+import { aggregateFolder, isViewed } from './model';
+
+const METADATA_ATTRIBUTE = 'data-ght-pr-metadata';
+const numberFormatter = new Intl.NumberFormat();
+
+export interface SidebarCallbacks {
+  onViewedChange(path: string, viewed: boolean): void;
+  onRetry(): void;
+  onOpenSetup(): void;
+}
+
+export class SidebarRenderer {
+  constructor(private readonly callbacks: SidebarCallbacks) {}
+
+  render(snapshot: PullRequestFilesSnapshot): boolean {
+    const root = document.querySelector<HTMLElement>('#pr-file-tree');
+    if (!root) {
+      return false;
+    }
+
+    this.hideBanner(root);
+    const filesByPath = new Map(
+      snapshot.files.map((file) => [file.path, file]),
+    );
+
+    for (const row of root.querySelectorAll<HTMLElement>(
+      'li[role="treeitem"][id]',
+    )) {
+      const path = row.id;
+      const file = filesByPath.get(path);
+      if (file && !row.hasAttribute('aria-expanded')) {
+        this.renderFileRow(row, file);
+      } else if (row.hasAttribute('aria-expanded')) {
+        const aggregate = aggregateFolder(path, snapshot.files);
+        if (aggregate.total > 0) {
+          this.renderFolderRow(row, aggregate);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  showLoading(): void {
+    this.showBanner('Loading pull request metadata…', 'loading');
+  }
+
+  showError(message: string): void {
+    this.showBanner(message, 'error');
+  }
+
+  showFileError(path: string, message: string): void {
+    const row = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '#pr-file-tree li[role="treeitem"][id]',
+      ),
+    ).find((candidate) => candidate.id === path);
+    const metadata = row?.querySelector<HTMLElement>(
+      `[${METADATA_ATTRIBUTE}="file"]`,
+    );
+    if (!metadata) {
+      return;
+    }
+
+    metadata.classList.add('ght-pr-metadata--error');
+    metadata.title = message;
+    window.setTimeout(() => {
+      metadata.classList.remove('ght-pr-metadata--error');
+      metadata.removeAttribute('title');
+    }, 6_000);
+  }
+
+  clear(): void {
+    document
+      .querySelectorAll(`[${METADATA_ATTRIBUTE}]`)
+      .forEach((element) => element.remove());
+  }
+
+  private renderFileRow(row: HTMLElement, file: PullRequestFile): void {
+    const container = findContentContainer(row);
+    if (!container) {
+      return;
+    }
+
+    let metadata = findDirectMetadata(container);
+    if (!metadata) {
+      metadata = document.createElement('span');
+      metadata.className = 'ght-pr-metadata';
+      metadata.setAttribute(METADATA_ATTRIBUTE, 'file');
+      metadata.innerHTML = `
+        <span class="ght-pr-metadata__counts"></span>
+        <label class="ght-pr-metadata__viewed" title="Mark file as viewed">
+          <input type="checkbox">
+          <span class="sr-only">Viewed</span>
+        </label>
+      `;
+      metadata.addEventListener('click', (event) => event.stopPropagation());
+      const checkbox = metadata.querySelector<HTMLInputElement>('input');
+      checkbox?.addEventListener('change', () => {
+        this.callbacks.onViewedChange(file.path, checkbox.checked);
+      });
+      container.append(metadata);
+    }
+
+    const counts = metadata.querySelector<HTMLElement>(
+      '.ght-pr-metadata__counts',
+    );
+    if (counts) {
+      renderCounts(counts, file.additions, file.deletions);
+    }
+
+    const checkbox = metadata.querySelector<HTMLInputElement>('input');
+    if (checkbox) {
+      checkbox.checked = isViewed(file.viewedState);
+      checkbox.setAttribute(
+        'aria-label',
+        `${checkbox.checked ? 'Unmark' : 'Mark'} ${file.path} as viewed`,
+      );
+      checkbox.parentElement?.setAttribute(
+        'title',
+        checkbox.checked ? 'Unmark file as viewed' : 'Mark file as viewed',
+      );
+    }
+  }
+
+  private renderFolderRow(
+    row: HTMLElement,
+    aggregate: ReturnType<typeof aggregateFolder>,
+  ): void {
+    const container = findContentContainer(row);
+    if (!container) {
+      return;
+    }
+
+    let metadata = findDirectMetadata(container);
+    if (!metadata) {
+      metadata = document.createElement('span');
+      metadata.className =
+        'ght-pr-metadata ght-pr-metadata--folder';
+      metadata.setAttribute(METADATA_ATTRIBUTE, 'folder');
+      metadata.innerHTML = `
+        <span class="ght-pr-metadata__counts"></span>
+        <span class="ght-pr-metadata__progress"></span>
+      `;
+      container.append(metadata);
+    }
+
+    const counts = metadata.querySelector<HTMLElement>(
+      '.ght-pr-metadata__counts',
+    );
+    if (counts) {
+      renderCounts(counts, aggregate.additions, aggregate.deletions);
+    }
+
+    const progress = metadata.querySelector<HTMLElement>(
+      '.ght-pr-metadata__progress',
+    );
+    if (progress) {
+      progress.textContent = `${aggregate.viewed}/${aggregate.total}`;
+      progress.title = `${aggregate.viewed} of ${aggregate.total} files viewed`;
+      progress.setAttribute(
+        'aria-label',
+        `${aggregate.viewed} of ${aggregate.total} files viewed`,
+      );
+    }
+  }
+
+  private showBanner(message: string, state: 'loading' | 'error'): void {
+    const root = document.querySelector<HTMLElement>('#pr-file-tree');
+    if (!root) {
+      return;
+    }
+
+    let banner = root.querySelector<HTMLElement>(
+      `[${METADATA_ATTRIBUTE}="banner"]`,
+    );
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.className = 'ght-pr-banner';
+      banner.setAttribute(METADATA_ATTRIBUTE, 'banner');
+      const filter = root.querySelector('#diff-file-tree-filter');
+      filter?.insertAdjacentElement('afterend', banner);
+      if (!filter) {
+        root.prepend(banner);
+      }
+    }
+
+    banner.dataset.state = state;
+    banner.replaceChildren();
+    const text = document.createElement('span');
+    text.textContent = message;
+    banner.append(text);
+
+    if (state === 'error') {
+      banner.append(
+        createBannerButton('Retry', this.callbacks.onRetry),
+        createBannerButton('Open setup', this.callbacks.onOpenSetup),
+      );
+    }
+  }
+
+  private hideBanner(root: HTMLElement): void {
+    root
+      .querySelector(`[${METADATA_ATTRIBUTE}="banner"]`)
+      ?.remove();
+  }
+}
+
+export function isNativeViewedButton(
+  target: Element,
+): target is HTMLButtonElement {
+  return (
+    target instanceof HTMLButtonElement &&
+    target.hasAttribute('aria-pressed') &&
+    target.closest('[data-diff-header-wrapper="true"]') !== null &&
+    target.textContent?.includes('Viewed') === true
+  );
+}
+
+export function getNativeViewedPath(button: HTMLButtonElement): string | null {
+  const header = button.closest<HTMLElement>(
+    '[data-diff-header-wrapper="true"]',
+  );
+  const explicitPath = header?.querySelector<HTMLElement>('[data-file-path]')
+    ?.dataset.filePath;
+  if (explicitPath) {
+    return explicitPath;
+  }
+
+  const text = header
+    ?.querySelector('h3 a[href^="#diff-"] code')
+    ?.textContent?.replace(/[\u200e\u200f]/g, '')
+    .trim();
+  return text || null;
+}
+
+function findContentContainer(row: HTMLElement): HTMLElement | null {
+  return row.querySelector<HTMLElement>('.PRIVATE_TreeView-item-content');
+}
+
+function findDirectMetadata(container: HTMLElement): HTMLElement | null {
+  return Array.from(container.children).find((element) =>
+    element.hasAttribute(METADATA_ATTRIBUTE),
+  ) as HTMLElement | null;
+}
+
+function renderCounts(
+  container: HTMLElement,
+  additions: number,
+  deletions: number,
+): void {
+  container.replaceChildren();
+  if (additions === 0 && deletions === 0) {
+    const unavailable = document.createElement('span');
+    unavailable.className = 'ght-pr-metadata__unavailable';
+    unavailable.textContent = '—';
+    unavailable.title = 'Line counts unavailable';
+    container.append(unavailable);
+    return;
+  }
+
+  if (additions > 0) {
+    const added = document.createElement('span');
+    added.className = 'ght-pr-metadata__additions';
+    added.textContent = `+${numberFormatter.format(additions)}`;
+    container.append(added);
+  }
+
+  if (deletions > 0) {
+    const deleted = document.createElement('span');
+    deleted.className = 'ght-pr-metadata__deletions';
+    deleted.textContent = `-${numberFormatter.format(deletions)}`;
+    container.append(deleted);
+  }
+}
+
+function createBannerButton(
+  label: string,
+  callback: () => void,
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', callback);
+  return button;
+}

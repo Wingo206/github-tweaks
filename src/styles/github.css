@@ -1,0 +1,114 @@
+#pr-file-tree .PRIVATE_TreeView-item-content:has(> .ght-pr-metadata) {
+  min-width: 0;
+}
+
+#pr-file-tree
+  .PRIVATE_TreeView-item-content:has(> .ght-pr-metadata)
+  .PRIVATE_TreeView-item-content-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ght-pr-metadata {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  margin-left: auto;
+  padding-left: 0.35rem;
+  white-space: nowrap;
+}
+
+.ght-pr-metadata__counts {
+  display: inline-flex;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.ght-pr-metadata__additions {
+  color: var(--fgColor-success, var(--color-success-fg, #1a7f37));
+}
+
+.ght-pr-metadata__deletions {
+  color: var(--fgColor-danger, var(--color-danger-fg, #cf222e));
+}
+
+.ght-pr-metadata__unavailable,
+.ght-pr-metadata__progress {
+  color: var(--fgColor-muted, var(--color-fg-muted, #656d76));
+}
+
+.ght-pr-metadata__progress {
+  border-left: 1px solid
+    var(--borderColor-muted, var(--color-border-muted, #d8dee4));
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding-left: 0.35rem;
+}
+
+.ght-pr-metadata__viewed {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  margin: 0;
+}
+
+.ght-pr-metadata__viewed input {
+  accent-color: var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #0969da));
+  cursor: pointer;
+  height: 14px;
+  margin: 0;
+  width: 14px;
+}
+
+.ght-pr-metadata--error {
+  border-radius: 4px;
+  outline: 2px solid
+    var(--borderColor-danger-emphasis, var(--color-danger-emphasis, #cf222e));
+  outline-offset: 2px;
+}
+
+.ght-pr-banner {
+  align-items: center;
+  background: var(--bgColor-muted, var(--color-canvas-subtle, #f6f8fa));
+  border: 1px solid
+    var(--borderColor-default, var(--color-border-default, #d0d7de));
+  border-radius: 6px;
+  color: var(--fgColor-muted, var(--color-fg-muted, #656d76));
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 0.4rem;
+  margin: 0 0.5rem 0.5rem 0;
+  padding: 0.4rem 0.5rem;
+}
+
+.ght-pr-banner[data-state='error'] {
+  background: var(
+    --bgColor-danger-muted,
+    var(--color-danger-subtle, rgba(255, 129, 130, 0.1))
+  );
+  border-color: var(
+    --borderColor-danger-muted,
+    var(--color-danger-muted, rgba(255, 129, 130, 0.4))
+  );
+  color: var(--fgColor-danger, var(--color-danger-fg, #cf222e));
+}
+
+.ght-pr-banner > span {
+  flex: 1 1 100%;
+}
+
+.ght-pr-banner button {
+  background: transparent;
+  border: 0;
+  color: var(--fgColor-accent, var(--color-accent-fg, #0969da));
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
