@@ -2,6 +2,7 @@ import type { PageStatus, PullRequestRef } from '../../shared/types';
 import type { Feature, FeatureContext } from '../types';
 import { PrSidebarController } from './controller';
 import { parsePullRequestUrl } from './model';
+import './styles.css';
 
 export class PrSidebarMetadataFeature implements Feature {
   readonly id = 'pr-sidebar-metadata';

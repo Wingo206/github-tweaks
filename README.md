@@ -5,7 +5,9 @@ The project is intentionally organized as small, independent features so more
 tweaks can be added without turning the content script into one large DOM
 patch.
 
-## Current feature: pull request sidebar metadata
+## Features
+
+### Pull request sidebar metadata
 
 On a pull request's changed-files page, GitHub Tweaks adds:
 
@@ -17,6 +19,12 @@ On a pull request's changed-files page, GitHub Tweaks adds:
 
 The feature supports GitHub's `/pull/:number/changes` and legacy
 `/pull/:number/files` routes on `github.com`.
+
+### Mermaid fullscreen viewer
+
+Anywhere GitHub renders a Mermaid diagram, the native fullscreen dialog is
+expanded to about 90% of the viewport with mouse pan (left or middle drag) and
+wheel zoom toward the cursor. Close with Esc or GitHub's close button.
 
 ## Install for local use
 
@@ -50,7 +58,7 @@ never exposed to GitHub page scripts or the content script.
 
 The extension requests access only to:
 
-- `https://github.com/*` to enhance pull request pages
+- `https://github.com/*` to enhance pull request pages and Mermaid embeds
 - `https://api.github.com/*` to read changed-file metadata and update Viewed
   state
 - extension-local storage for the token and pull request metadata cache

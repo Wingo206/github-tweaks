@@ -17,7 +17,7 @@ gates below are satisfied.
 
 ```text
 Feature progress:
-- [ ] 1. Brief grill (UX, data source, injection intent)
+- [ ] 1. Brief grill (UX, data source, injection intent, permissions tradeoff)
 - [ ] 2. Emit DevTools capture snippet; wait for packet
 - [ ] 3. Sanitize → fixture → stable anchors
 - [ ] 4. Scaffold feature directory + register
@@ -37,7 +37,12 @@ least:
   authoritative data; use the DOM for injection anchors and native-control sync.
   DOM-only is fine for rearranging already-visible UI.
 - **Injection intent:** append / prepend / wrap / replace — and the mount root
-- **Permissions:** no new host/API permissions unless proven necessary
+- **Permissions tradeoff:** if the feature wants new host permissions, API
+  scopes, or extension capabilities, surface that explicitly. Present staying
+  within current permissions vs expanding them as options (with a
+  recommendation and what each costs: install prompt, review surface, token
+  scope, attack footprint). Do not silently work around a needed permission,
+  and do not add one without this decision.
 
 Token storage and GraphQL stay in the background worker. Never expose the PAT
 to content scripts or page JS.
@@ -93,6 +98,7 @@ src/features/<feature-id>/
   dom.test.ts           # against sanitized fixtures
   controller.ts         # optional: observers, messaging, orchestration
   controller.test.ts    # if controller exists
+  styles.css            # feature-scoped injected styles (import from index.ts)
 tests/fixtures/<...>.html
 ```
 
@@ -102,8 +108,8 @@ tests/fixtures/<...>.html
 - Shared API/GraphQL/cache belongs in `src/github/` and message types in
   `src/shared/types.ts` — not buried as one-off fetch logic in the feature
   unless truly feature-private and non-reusable.
-- Styles go in `src/styles/github.css` with `ght-<short>-*` classes and
-  `data-ght-*` markers.
+- Styles live in the feature as `styles.css`, imported from `index.ts`, using
+  `ght-<short>-*` classes and `data-ght-*` markers.
 
 ## 5. Implement
 
@@ -142,4 +148,4 @@ Run `pnpm check` before calling the feature done.
 - Putting the PAT or raw `fetch` to `api.github.com` in a content feature
 - Non-idempotent injection (duplicate nodes on re-render)
 - Leaving observers/listeners attached after `stop`
-- Expanding permissions “just in case”
+- Adding or avoiding permissions without an explicit grill decision

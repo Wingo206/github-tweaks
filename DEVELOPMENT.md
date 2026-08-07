@@ -54,10 +54,9 @@ src/
   features/
     types.ts                shared feature lifecycle
     runner.ts               route-aware feature activation
-    pr-sidebar-metadata/    model, DOM adapter, controller, and unit tests
+    <feature-id>/           model, DOM, controller, styles.css, tests
   github/                   GraphQL, pull request API, cache, and unit tests
   shared/                   message and domain types
-  styles/                   namespaced injected styles
 tests/
   setup.ts                  shared Vitest browser and DOM setup
   fixtures/                 minimal sanitized GitHub DOM captures
@@ -94,10 +93,11 @@ Canonical layout (see `src/features/pr-sidebar-metadata/`):
 
 ```text
 src/features/<feature-id>/
-  index.ts     # Feature lifecycle
-  model.ts     # pure logic
-  dom.ts       # selectors and injection
+  index.ts       # Feature lifecycle (imports ./styles.css)
+  model.ts       # pure logic
+  dom.ts         # selectors and injection
   controller.ts  # optional orchestration / messaging
+  styles.css     # feature-scoped injected styles
 ```
 
 ### Feature lifecycle

@@ -1,17 +1,18 @@
 import { FeatureRunner } from '../src/features/runner';
+import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
 import type {
   ContentRequest,
   PageStatus,
 } from '../src/shared/types';
-import '../src/styles/github.css';
 
 export default defineContentScript({
   matches: ['https://github.com/*'],
   runAt: 'document_idle',
   main() {
     const sidebarFeature = new PrSidebarMetadataFeature();
-    const runner = new FeatureRunner([sidebarFeature]);
+    const mermaidFeature = new MermaidFullscreenFeature();
+    const runner = new FeatureRunner([sidebarFeature, mermaidFeature]);
     let lastUrl = window.location.href;
     let syncQueued = false;
 
