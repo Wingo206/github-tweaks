@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { PrSidebarController } from '../src/features/pr-sidebar-metadata/controller';
+import { PrSidebarController } from './controller';
 import type {
   BackgroundRequest,
   PullRequestFilesSnapshot,
-} from '../src/shared/types';
+} from '../../shared/types';
 
 const pageFixture = [
   readFileSync(resolve(process.cwd(), 'tests/fixtures/sidebar.html'), 'utf8'),

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   loadPullRequestFiles,
   setFileViewed,
-} from '../src/github/pullRequestFiles';
+} from './pullRequestFiles';
 
 function jsonResponse(data: unknown): Response {
   return {

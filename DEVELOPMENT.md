@@ -54,11 +54,12 @@ src/
   features/
     types.ts                shared feature lifecycle
     runner.ts               route-aware feature activation
-    pr-sidebar-metadata/    model, DOM adapter, and controller
-  github/                   GraphQL, pull request API, and cache
+    pr-sidebar-metadata/    model, DOM adapter, controller, and unit tests
+  github/                   GraphQL, pull request API, cache, and unit tests
   shared/                   message and domain types
   styles/                   namespaced injected styles
 tests/
+  setup.ts                  shared Vitest browser and DOM setup
   fixtures/                 minimal sanitized GitHub DOM captures
   e2e/                      unpacked-extension Chromium flow
 ```

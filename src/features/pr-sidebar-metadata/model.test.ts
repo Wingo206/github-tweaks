@@ -3,8 +3,8 @@ import {
   aggregateFolder,
   parsePullRequestUrl,
   updateFileViewedState,
-} from '../src/features/pr-sidebar-metadata/model';
-import type { PullRequestFilesSnapshot } from '../src/shared/types';
+} from './model';
+import type { PullRequestFilesSnapshot } from '../../shared/types';
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },

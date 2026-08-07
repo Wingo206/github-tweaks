@@ -5,8 +5,8 @@ import {
   getNativeViewedPath,
   isNativeViewedButton,
   SidebarRenderer,
-} from '../src/features/pr-sidebar-metadata/dom';
-import type { PullRequestFilesSnapshot } from '../src/shared/types';
+} from './dom';
+import type { PullRequestFilesSnapshot } from '../../shared/types';
 
 const sidebarFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/sidebar.html'),
