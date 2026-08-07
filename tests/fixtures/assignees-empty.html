@@ -1,0 +1,44 @@
+<div
+  class="discussion-sidebar-item sidebar-assignee js-discussion-sidebar-item js-socket-channel js-updatable-content"
+  data-url="/acme/widgets/issues/42/show_partial?partial=issues%2Fsidebar%2Fshow%2Fassignees"
+  data-channel-event-name="assignees_updated"
+  data-gid="PR_test"
+>
+  <form
+    class="js-issue-sidebar-form"
+    aria-label="Select assignees"
+    action="/acme/widgets/issues/42/assignees"
+    method="post"
+  >
+    <details
+      class="details-reset details-overlay select-menu"
+      id="assignees-select-menu"
+    >
+      <summary
+        class="text-bold discussion-sidebar-heading discussion-sidebar-toggle"
+        aria-haspopup="menu"
+        role="button"
+      >
+        Assignees
+      </summary>
+      <details-menu class="select-menu-modal" role="menu">
+        <div class="select-menu-header">
+          <span class="select-menu-title"
+            >Assign up to 10 people to this pull request</span
+          >
+        </div>
+      </details-menu>
+    </details>
+
+    <span class="css-truncate js-issue-assignees">
+      No one—<button
+        type="submit"
+        class="btn-link Link--muted Link--inTextBlock js-issue-assign-self"
+        name="issue[user_assignee_ids][]"
+        value="1"
+      >
+        assign yourself
+      </button>
+    </span>
+  </form>
+</div>

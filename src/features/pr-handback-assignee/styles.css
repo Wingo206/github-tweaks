@@ -1,0 +1,10 @@
+.ght-handback__button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.ght-handback__error {
+  color: var(--fgColor-danger, var(--color-danger-fg, #d1242f));
+  font-size: 12px;
+  margin: 0.25rem 0 0.5rem;
+}

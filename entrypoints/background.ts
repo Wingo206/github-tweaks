@@ -7,6 +7,10 @@ import {
 } from '../src/github/storage';
 import { validateToken } from '../src/github/graphql';
 import {
+  handbackAssignee,
+  loadHandbackContext,
+} from '../src/github/pullRequestAssignees';
+import {
   loadPullRequestFiles,
   setFileViewed,
 } from '../src/github/pullRequestFiles';
@@ -80,6 +84,14 @@ async function handleRequest(request: BackgroundRequest): Promise<unknown> {
       );
       await updateCachedViewedState(request);
       return undefined;
+    }
+    case 'pull:handback-context': {
+      const token = await requireToken();
+      return loadHandbackContext(token, request.ref);
+    }
+    case 'pull:handback-assignee': {
+      const token = await requireToken();
+      return handbackAssignee(token, request.ref);
     }
   }
 }

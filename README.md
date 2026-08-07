@@ -27,6 +27,14 @@ expanded to about 90% of the viewport with free mouse pan (left or middle
 drag), wheel zoom toward the cursor, and custom scrollbars for position when
 zoomed in. Close with Esc or GitHub's close button.
 
+### Hand back PR assignee
+
+On pull request pages, when you are assigned and are not the author, GitHub
+Tweaks adds a **reassign author** action beside Assignees (same style as
+Refined GitHub’s “review now” / “approve now”). One click removes you as an
+assignee (leaving other assignees alone), assigns the author if needed, then
+refreshes GitHub's Assignees partial so the list shows GitHub's values.
+
 ## Install for local use
 
 Requirements: Node.js 20 or newer, pnpm, Chrome, and a GitHub fine-grained
@@ -60,8 +68,8 @@ never exposed to GitHub page scripts or the content script.
 The extension requests access only to:
 
 - `https://github.com/*` to enhance pull request pages and Mermaid embeds
-- `https://api.github.com/*` to read changed-file metadata and update Viewed
-  state
+- `https://api.github.com/*` to read changed-file metadata, update Viewed
+  state, and hand back PR assignees
 - extension-local storage for the token and pull request metadata cache
 
 ## Development

@@ -1,5 +1,6 @@
 import { FeatureRunner } from '../src/features/runner';
 import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
+import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
 import type {
   ContentRequest,
@@ -12,7 +13,12 @@ export default defineContentScript({
   main() {
     const sidebarFeature = new PrSidebarMetadataFeature();
     const mermaidFeature = new MermaidFullscreenFeature();
-    const runner = new FeatureRunner([sidebarFeature, mermaidFeature]);
+    const handbackFeature = new PrHandbackAssigneeFeature();
+    const runner = new FeatureRunner([
+      sidebarFeature,
+      mermaidFeature,
+      handbackFeature,
+    ]);
     let lastUrl = window.location.href;
     let syncQueued = false;
 

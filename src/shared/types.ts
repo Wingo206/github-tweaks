@@ -27,6 +27,16 @@ export type PageStatus =
   | { state: 'ready'; ref: PullRequestRef; fileCount: number; savedAt: number }
   | { state: 'error'; ref?: PullRequestRef; message: string };
 
+export interface HandbackContext {
+  viewerLogin: string;
+  viewerId: string;
+  authorLogin: string;
+  authorId: string;
+  assignableId: string;
+  assigneeLogins: string[];
+  assigneeIdsByLogin: Record<string, string>;
+}
+
 export type BackgroundRequest =
   | { type: 'auth:get' }
   | { type: 'auth:save'; token: string }
@@ -40,7 +50,9 @@ export type BackgroundRequest =
       pullRequestId: string;
       path: string;
       viewed: boolean;
-    };
+    }
+  | { type: 'pull:handback-context'; ref: PullRequestRef }
+  | { type: 'pull:handback-assignee'; ref: PullRequestRef };
 
 export interface BackgroundResponse<T = unknown> {
   ok: boolean;
