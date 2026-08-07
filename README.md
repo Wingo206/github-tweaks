@@ -69,6 +69,9 @@ The extension requests access only to:
 See [DEVELOPMENT.md](DEVELOPMENT.md) for architecture, commands, tests,
 debugging, selector conventions, and fixture maintenance.
 
+For agent-assisted DOM captures, load the unpacked
+[DOM Dump Picker](devtools/dom-picker/) and run `pnpm dump-receiver`.
+
 ## Direction
 
 Future tweaks should remain narrowly scoped, default to minimal permissions,

@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm build && playwright test",
-    "check": "pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build"
+    "check": "pnpm typecheck && pnpm test && pnpm test:e2e && pnpm build",
+    "dump-receiver": "node devtools/dom-picker/receiver/server.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

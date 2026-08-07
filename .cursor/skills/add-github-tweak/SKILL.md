@@ -18,7 +18,7 @@ gates below are satisfied.
 ```text
 Feature progress:
 - [ ] 1. Brief grill (UX, data source, injection intent, permissions tradeoff)
-- [ ] 2. Emit DevTools capture snippet; wait for packet
+- [ ] 2. Capture HTML (prefer DOM Dump Picker loop)
 - [ ] 3. Sanitize → fixture → stable anchors
 - [ ] 4. Scaffold feature directory + register
 - [ ] 5. Implement model / dom / controller
@@ -47,27 +47,28 @@ least:
 Token storage and GraphQL stay in the background worker. Never expose the PAT
 to content scripts or page JS.
 
-## 2. Capture packet (hard gate)
+## 2. HTML dump (hard gate)
 
-**Do not write `dom.ts`, selectors, or injection code until a capture packet is
-returned — or the user explicitly reuses an existing fixture.**
+**Do not write `dom.ts`, selectors, or injection code until enough parent-page
+markup is returned — or the user explicitly reuses an existing fixture.**
 
-First pass is **user-driven Inspect Element**, not agent-guessed selectors:
+**Prefer** the [DOM Dump Picker](../dom-dump-picker/SKILL.md) loop: start
+`pnpm dump-receiver`, ask the user to pick (hover · wheel expand · click), then
+read `devtools/dom-picker/dumps/latest.html`. Manual Copy outerHTML is the
+fallback in [capture-snippet.md](capture-snippet.md).
 
-1. From the grill, list the **named pieces** to capture (mount root, example
-   row, related native controls / states).
-2. Give the user the Add / Finish snippets from
-   [capture-snippet.md](capture-snippet.md): they select each node in Elements
-   (`$0`), run Add with that name, then Finish to clipboard.
-3. Wait for the pasted JSON (or saved files). Derive candidate selectors from
-   captured `id` / attrs / structure.
-4. Optionally emit a tighter selector-based recapture once anchors are known.
+1. From the grill, say what the dump must include (mount surface, controls,
+   related native UI) and which states matter (closed/open, etc.).
+2. Run the picker receiver (or fall back to Inspect → Copy outerHTML on the
+   **top** `github.com` frame).
+3. When the UI has modes, ask for a second dump of the other state.
+4. For layout bugs, include computed styles (picker checkbox, or paste Computed).
 5. Require a screenshot of intended placement when layout matters.
 
 Minimum packet:
 
-- target region `outerHTML` (mount root)
-- related native UI if syncing with existing controls
+- one ancestor `outerHTML` that includes the mount root and inject/hijack targets
+- other-state dump when state matters
 - screenshot when placement is non-obvious
 - short injection-intent note from the grill
 
@@ -143,7 +144,8 @@ Run `pnpm check` before calling the feature done.
 
 ## Anti-patterns
 
-- Inventing CSS selectors before any Inspect/`$0` capture (or existing fixture)
+- Inventing CSS selectors before any outerHTML dump (or existing fixture)
+- Capturing inside a cross-origin iframe instead of the top `github.com` frame
 - Depending on GitHub CSS-module hash class names
 - Putting the PAT or raw `fetch` to `api.github.com` in a content feature
 - Non-idempotent injection (duplicate nodes on re-render)

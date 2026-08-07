@@ -1,0 +1,46 @@
+html.ght-dom-dump-picking,
+html.ght-dom-dump-picking * {
+  cursor: crosshair !important;
+}
+
+#ght-dom-dump-root {
+  all: initial;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+#ght-dom-dump-root .ght-dom-dump-box {
+  position: fixed;
+  box-sizing: border-box;
+  border: 2px solid #ff7a00;
+  background: rgba(255, 122, 0, 0.12);
+  display: none;
+}
+
+#ght-dom-dump-root .ght-dom-dump-label {
+  position: fixed;
+  z-index: 1;
+  max-width: min(90vw, 640px);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.3;
+  display: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#ght-dom-dump-root .ght-dom-dump-label.ght-dom-dump-ok {
+  background: #0a7;
+}
+
+#ght-dom-dump-root .ght-dom-dump-label.ght-dom-dump-err {
+  background: #c33;
+  white-space: normal;
+}

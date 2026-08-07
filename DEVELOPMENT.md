@@ -86,8 +86,10 @@ message or import token storage into a content feature.
 ### Adding a feature
 
 Use the project skill [`.cursor/skills/add-github-tweak/`](.cursor/skills/add-github-tweak/)
-when starting a new tweak. It defines the grill → DevTools capture → fixture →
-scaffold → test workflow, including a console snippet template for HTML dumps.
+when starting a new tweak. It defines the grill → HTML dump → fixture →
+scaffold → test workflow. Prefer the [DOM Dump Picker](devtools/dom-picker/)
+(`pnpm dump-receiver` + unpacked extension); manual outerHTML is documented in
+`capture-snippet.md` as a fallback.
 
 Canonical layout (see `src/features/pr-sidebar-metadata/`):
 
@@ -173,14 +175,16 @@ Before releasing a change:
 
 When GitHub changes the UI:
 
-1. In DevTools, copy the outer HTML for `#pr-file-tree`.
-2. Copy representative `data-diff-header-wrapper` elements for one viewed and
-   one unviewed file.
+1. Prefer the DOM Dump Picker (`.cursor/skills/dom-dump-picker/`): start
+   `pnpm dump-receiver`, pick a generous ancestor on the top frame, then read
+   `devtools/dom-picker/dumps/latest.html`. Manual Copy outerHTML is fine too.
+2. For stateful UI, dump each relevant state (e.g. viewed and unviewed rows,
+   dialog closed and open). For layout bugs, include computed styles.
 3. Remove repository names, code, comments, generated class hashes, unrelated
    controls, and React-generated IDs.
-4. Keep only structural anchors used by the adapter: tree roles/levels,
-   full-path IDs, diff links, `data-file-path`, and Viewed ARIA state.
-5. Update `tests/fixtures` and run `pnpm test`.
+4. Keep only structural anchors used by the adapter (IDs, ARIA, stable
+   `data-*`, stable class prefixes).
+5. Update `tests/fixtures` and run `pnpm test`. Delete disposable dumps.
 6. If selectors changed, update the DOM adapter and fixture together, then run
    `pnpm check`.
 

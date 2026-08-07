@@ -146,6 +146,9 @@ vite.config.ts.timestamp-*
 .wxt/
 .output/
 
+# DOM Dump Picker captures
+devtools/dom-picker/dumps/
+
 # Playwright
 playwright-report/
 test-results/

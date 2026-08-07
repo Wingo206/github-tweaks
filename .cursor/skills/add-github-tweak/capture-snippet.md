@@ -1,109 +1,74 @@
-# DevTools capture snippet
+# HTML dump capture
 
-**Default first pass:** the user picks elements in Inspect Element. The agent
-does **not** need to invent CSS selectors up front.
+**Prefer** the [DOM Dump Picker](../dom-dump-picker/SKILL.md) agent loop
+(`pnpm dump-receiver` + unpacked `devtools/dom-picker/extension`). Use this
+manual path only when the picker/receiver is unavailable.
 
-Flow:
+The agent does **not** invent CSS selectors up front.
 
-1. Agent tells the user which logical pieces to select (mount root, one example
-   row, related native control in each relevant state, etc.).
-2. User selects a node in Elements (`$0`), then runs **Add** in the console.
-3. Repeat for each named piece.
-4. User runs **Finish** once; paste the JSON back into chat.
+Use the GitHub **page** top frame, not the extension service worker and not a
+cross-origin iframe (e.g. Mermaid `viewscreen`).
 
-Use the GitHub **page** DevTools console, not the extension service worker.
+## Manual flow
 
-## Add (run once per selected element)
+1. Agent names what the dump must include (controls + mount surface + any
+   related native UI), and which UI states matter (closed/open, checked/unchecked).
+2. User opens Elements on the **top** `github.com` frame.
+3. User selects a node that wraps everything needed, walking **up** until the
+   relevant controls and surfaces are inside it.
+4. User copies that node’s HTML into a file in the repo (or pastes into chat):
+   - Right-click → **Copy** → **Copy outerHTML**, or
+   - With `$0` selected, run the one-liner below.
+5. Repeat for each distinct UI state when state matters.
+6. Agent derives anchors from the dump(s), then sanitizes into `tests/fixtures/`.
 
-Customize the `name` argument the agent asks for (`mount`, `fileRow`,
-`viewedControl`, …).
+## One-liner (optional)
 
-```js
-((name = 'mount') => {
-  const el = $0;
-  if (!(el instanceof Element)) {
-    console.error('Select an element in the Elements panel first ($0).');
-    return null;
-  }
-
-  const store = (window.__ghtCapture ??= {
-    url: location.href,
-    title: document.title,
-    regions: {},
-  });
-
-  const attrs = {};
-  for (const attr of el.attributes) {
-    attrs[attr.name] = attr.value;
-  }
-
-  store.regions[name] = {
-    name,
-    tagName: el.tagName.toLowerCase(),
-    id: el.id || null,
-    className: typeof el.className === 'string' ? el.className : null,
-    attrs,
-    outerHTML: el.outerHTML,
-  };
-
-  console.info(`Captured "${name}"`, store.regions[name]);
-  return store;
-})('mount');
-```
-
-## Finish (copy packet)
+Select the ancestor so `$0` is it, then:
 
 ```js
-(() => {
-  const store = window.__ghtCapture;
-  if (!store || !Object.keys(store.regions || {}).length) {
-    console.error('No captures yet. Select an element and run Add first.');
-    return null;
-  }
-
-  const packet = {
-    ...store,
-    capturedAt: new Date().toISOString(),
-    notes: 'Paste this JSON back into the agent chat (or save as a file).',
-  };
-
-  const json = JSON.stringify(packet, null, 2);
-  if (typeof copy === 'function') {
-    copy(json);
-    console.info('GitHub Tweaks capture copied to clipboard.');
-  } else {
-    console.info('copy() unavailable; use the returned value.');
-  }
-
-  delete window.__ghtCapture;
-  return packet;
-})();
+copy($0.outerHTML);
 ```
 
-## Optional: selector-based recapture
+Paste/save as something like `dump.html`. Metadata is optional; raw HTML is
+enough. If useful, wrap once:
 
-Only after the first packet reveals stable anchors (or the user already knows
-them), the agent may emit a follow-up snippet that `querySelector`s named
-roots for a tighter dump. Do not start here when the surface is unfamiliar.
+```js
+copy({
+  url: location.href,
+  tagName: $0.tagName,
+  id: $0.id || null,
+  className: typeof $0.className === 'string' ? $0.className : null,
+  attrs: Object.fromEntries([...$0.attributes].map((a) => [a.name, a.value])),
+  outerHTML: $0.outerHTML,
+});
+```
+
+## Layout / CSS fights
+
+When sizing, centering, or overlays look wrong, also dump the broken open state
+and paste **Computed** values for the suspect node: `width`, `max-width`,
+`height`, `max-height`, `position`, `left`, `top`, `transform`. A screenshot of
+Computed is fine. With the picker, enable **Include key computed styles**.
 
 ## Agent instructions
 
-1. From the grill, list **named pieces** the user should Inspect — not guessed
-   CSS selectors. Example: “select the file-tree container”, “one file row”,
-   “a native Viewed control that is checked”, “one that is unchecked”.
-2. Hand them Add + Finish. Ask them to run Add once per piece with the agreed
-   `name`.
-3. Capture after the relevant UI is loaded (expand dirs, reveal virtualized
-   rows if needed).
-4. From the packet, prefer stable anchors in this order: `id` → ARIA/role/label
-   → stable `data-*` → stable class **prefix**. Record candidate selectors in
-   the fixture/adapter; never rely on hash suffixes.
-5. Sanitize into `tests/fixtures/` before coding. Do not commit raw captures
-   with private source, repo names, tokens, or user content.
+1. Prefer starting the picker receiver and asking the user to pick (see
+   [dom-dump-picker](../dom-dump-picker/SKILL.md)).
+2. From the grill, describe inclusion criteria in plain language — not guessed
+   CSS selectors.
+3. Capture after the relevant UI is loaded (expand dirs, open dialogs, reveal
+   virtualized rows if needed).
+4. From the dump, prefer stable anchors in this order: `id` → ARIA/role/label →
+   stable `data-*` → stable class **prefix**. Never rely on hash suffixes.
+5. Sanitize into `tests/fixtures/` before coding. Do not commit raw dumps with
+   private source, repo names, tokens, or user content.
 
 ## What “good” looks like
 
-- Mount root and at least one inject target / example row captured
-- Related native controls included when the feature syncs with them
-- Both states represented when state matters (e.g. viewed / unviewed)
-- Attrs/`id` present so the agent can choose selectors without a full page dump
+- One generous ancestor that includes the mount root and inject/hijack targets
+- Separate dumps for distinct states when state matters (e.g. dialog closed vs
+  open)
+- Screenshot when placement is non-obvious
+- Computed styles when the bug is layout/CSS, not missing markup
+- Enough structure for the agent to choose selectors without a full-page dump
