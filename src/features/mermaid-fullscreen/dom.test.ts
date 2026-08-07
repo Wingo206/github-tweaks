@@ -74,7 +74,7 @@ describe('MermaidDialogEnhancer', () => {
     const originalParent = target.parentElement!;
     const originalDialogParent = dialog.parentElement!;
 
-    const enhancer = new MermaidDialogEnhancer(dialog, target);
+    const enhancer = new MermaidDialogEnhancer(details, dialog, target);
 
     expect(dialog.hasAttribute(ENHANCED_ATTRIBUTE)).toBe(true);
     expect(dialog.classList.contains('ght-mermaid-enhanced')).toBe(true);
@@ -82,6 +82,8 @@ describe('MermaidDialogEnhancer', () => {
     expect(target.closest(`.${VIEWPORT_CLASS}`)).toBeTruthy();
     expect(target.parentElement?.classList.contains(STAGE_CLASS)).toBe(true);
     expect(target.style.height).toBe('100%');
+    expect(document.querySelector('.ght-mermaid-scrollbar--x')).toBeTruthy();
+    expect(document.querySelector('.ght-mermaid-scrollbar--y')).toBeTruthy();
     expect(
       document.documentElement.classList.contains('ght-mermaid-enhanced-open'),
     ).toBe(true);
@@ -97,12 +99,37 @@ describe('MermaidDialogEnhancer', () => {
     ).toBe(false);
   });
 
-  it('zooms toward the cursor on wheel', () => {
+  it('closes via Escape and the native close button', () => {
+    document.body.innerHTML = fixture;
+    const details = findMermaidDetails(findMermaidEmbeds()[0]!)!;
+    details.open = true;
+    const dialog = findFullscreenDialog(details)!;
+    const target = findFullscreenRenderTarget(dialog)!;
+
+    const viaEscape = new MermaidDialogEnhancer(details, dialog, target);
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    expect(details.open).toBe(false);
+    viaEscape.teardown();
+
+    details.open = true;
+    const viaButton = new MermaidDialogEnhancer(details, dialog, target);
+    dialog
+      .querySelector<HTMLElement>('[data-close-dialog]')!
+      .dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true }),
+      );
+    expect(details.open).toBe(false);
+    viaButton.teardown();
+  });
+
+  it('zooms toward the cursor on wheel with free transform', () => {
     document.body.innerHTML = fixture;
     const details = findMermaidDetails(findMermaidEmbeds()[0]!)!;
     const dialog = findFullscreenDialog(details)!;
     const target = findFullscreenRenderTarget(dialog)!;
-    const enhancer = new MermaidDialogEnhancer(dialog, target);
+    const enhancer = new MermaidDialogEnhancer(details, dialog, target);
 
     const viewport = document.querySelector<HTMLElement>(`.${VIEWPORT_CLASS}`)!;
     vi.spyOn(viewport, 'getBoundingClientRect').mockReturnValue({
@@ -130,6 +157,8 @@ describe('MermaidDialogEnhancer', () => {
     );
 
     expect(enhancer.currentTransform.scale).toBeGreaterThan(1);
+    const stage = document.querySelector<HTMLElement>(`.${STAGE_CLASS}`)!;
+    expect(stage.style.transform).toContain('scale(');
     enhancer.teardown();
   });
 

@@ -37,6 +37,11 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
   padding: 0;
 }
 
+.ght-mermaid-enhanced .render-full-screen-close {
+  pointer-events: auto;
+  z-index: 3;
+}
+
 .ght-mermaid-viewport {
   cursor: grab;
   flex: 1 1 auto;
@@ -61,6 +66,7 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
 }
 
 .ght-mermaid-enhanced .js-render-target {
+  display: block;
   height: 100% !important;
   width: 100%;
 }
@@ -72,4 +78,51 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
   /* Keep pointer events on the viewport so pan/zoom is not stolen by the iframe. */
   pointer-events: none;
   width: 100%;
+}
+
+.ght-mermaid-scrollbar {
+  background: var(--bgColor-muted, var(--color-canvas-subtle, #f6f8fa));
+  position: absolute;
+  z-index: 2;
+}
+
+.ght-mermaid-scrollbar--x {
+  bottom: 0;
+  height: 12px;
+  left: 0;
+  right: 12px;
+}
+
+.ght-mermaid-scrollbar--y {
+  bottom: 12px;
+  right: 0;
+  top: 0;
+  width: 12px;
+}
+
+.ght-mermaid-scrollbar--inactive {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.ght-mermaid-scrollbar__thumb {
+  background: var(--borderColor-emphasis, var(--color-border-default, #8c959f));
+  border-radius: 6px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.ght-mermaid-scrollbar--x .ght-mermaid-scrollbar__thumb {
+  height: 100%;
+  min-width: 24px;
+}
+
+.ght-mermaid-scrollbar--y .ght-mermaid-scrollbar__thumb {
+  min-height: 24px;
+  width: 100%;
+}
+
+.ght-mermaid-scrollbar__thumb:hover {
+  background: var(--fgColor-muted, var(--color-fg-muted, #656d76));
 }

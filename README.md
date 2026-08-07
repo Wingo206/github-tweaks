@@ -23,8 +23,9 @@ The feature supports GitHub's `/pull/:number/changes` and legacy
 ### Mermaid fullscreen viewer
 
 Anywhere GitHub renders a Mermaid diagram, the native fullscreen dialog is
-expanded to about 90% of the viewport with mouse pan (left or middle drag) and
-wheel zoom toward the cursor. Close with Esc or GitHub's close button.
+expanded to about 90% of the viewport with free mouse pan (left or middle
+drag), wheel zoom toward the cursor, and custom scrollbars for position when
+zoomed in. Close with Esc or GitHub's close button.
 
 ## Install for local use
 
