@@ -47,11 +47,17 @@ to content scripts or page JS.
 **Do not write `dom.ts`, selectors, or injection code until a capture packet is
 returned — or the user explicitly reuses an existing fixture.**
 
-1. Customize the template in [capture-snippet.md](capture-snippet.md) with the
-   suspected mount roots and related native UI selectors.
-2. Give the user the snippet to paste in the GitHub page DevTools console.
-3. Wait for the pasted JSON (or saved files).
-4. Require a screenshot of intended placement when layout matters.
+First pass is **user-driven Inspect Element**, not agent-guessed selectors:
+
+1. From the grill, list the **named pieces** to capture (mount root, example
+   row, related native controls / states).
+2. Give the user the Add / Finish snippets from
+   [capture-snippet.md](capture-snippet.md): they select each node in Elements
+   (`$0`), run Add with that name, then Finish to clipboard.
+3. Wait for the pasted JSON (or saved files). Derive candidate selectors from
+   captured `id` / attrs / structure.
+4. Optionally emit a tighter selector-based recapture once anchors are known.
+5. Require a screenshot of intended placement when layout matters.
 
 Minimum packet:
 
@@ -131,7 +137,7 @@ Run `pnpm check` before calling the feature done.
 
 ## Anti-patterns
 
-- Guessing selectors from screenshots alone
+- Inventing CSS selectors before any Inspect/`$0` capture (or existing fixture)
 - Depending on GitHub CSS-module hash class names
 - Putting the PAT or raw `fetch` to `api.github.com` in a content feature
 - Non-idempotent injection (duplicate nodes on re-render)
