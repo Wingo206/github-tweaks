@@ -84,6 +84,22 @@ execution contexts:
 The token must remain in the background/storage layer. Do not return it from a
 message or import token storage into a content feature.
 
+### Adding a feature
+
+Use the project skill [`.cursor/skills/add-github-tweak/`](.cursor/skills/add-github-tweak/)
+when starting a new tweak. It defines the grill → DevTools capture → fixture →
+scaffold → test workflow, including a console snippet template for HTML dumps.
+
+Canonical layout (see `src/features/pr-sidebar-metadata/`):
+
+```text
+src/features/<feature-id>/
+  index.ts     # Feature lifecycle
+  model.ts     # pure logic
+  dom.ts       # selectors and injection
+  controller.ts  # optional orchestration / messaging
+```
+
 ### Feature lifecycle
 
 Each tweak implements `Feature` from `src/features/types.ts`:
