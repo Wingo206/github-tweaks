@@ -23,10 +23,13 @@ The feature supports GitHub's `/pull/:number/changes` and legacy
 
 ### Mermaid fullscreen viewer
 
-Anywhere GitHub renders a Mermaid diagram, the native fullscreen dialog is
-expanded to about 90% of the viewport with free mouse pan (left or middle
-drag), wheel zoom toward the cursor, and custom scrollbars for position when
-zoomed in. Close with Esc or GitHub's close button.
+Anywhere GitHub renders a Mermaid diagram, GitHub Tweaks replaces the native
+fullscreen control with its own button and modal (~90% of the viewport). The
+viewer clones GitHub's complete rendered SVG from its
+`viewscreen.githubusercontent.com` frame, then adds free mouse pan (left or
+middle drag), wheel zoom toward the cursor, and custom scrollbars when zoomed
+in. Close with Esc, the close button, or the backdrop. If the SVG cannot be
+loaded, the modal offers Retry or Show native viewer for that diagram.
 
 ### Hand back PR assignee
 

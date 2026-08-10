@@ -1,25 +1,29 @@
+import { requestRenderedSvg } from './bridge';
 import {
-  MermaidDialogEnhancer,
+  MermaidModal,
   clearWiredMarkers,
-  enhanceOpenDialog,
-  findMermaidDetails,
   findMermaidEmbeds,
+  findNativeDetails,
+  isNativeFallback,
   isWired,
+  markNativeFallback,
   markWired,
+  mountOpenControl,
+  showNativeOpenControl,
+  unmountOpenControl,
 } from './dom';
 
 export class MermaidFullscreenController {
   private observer: MutationObserver | null = null;
-  private readonly enhancements = new Map<
-    HTMLDetailsElement,
-    MermaidDialogEnhancer
-  >();
-  private readonly onToggleByDetails = new Map<
-    HTMLDetailsElement,
-    () => void
+  private modal: MermaidModal | null = null;
+  private activeEmbed: HTMLElement | null = null;
+  private readonly onClickByEmbed = new Map<
+    HTMLElement,
+    (event: MouseEvent) => void
   >();
   private stopped = true;
   private scanQueued = false;
+  private loadGeneration = 0;
 
   start(): void {
     this.stopped = false;
@@ -31,18 +35,21 @@ export class MermaidFullscreenController {
     this.stopped = true;
     this.observer?.disconnect();
     this.observer = null;
+    this.closeModal();
 
-    for (const [details, onToggle] of this.onToggleByDetails) {
-      details.removeEventListener('toggle', onToggle);
+    for (const [embed, onClick] of this.onClickByEmbed) {
+      const button = embed.querySelector<HTMLElement>('[data-ght-mermaid-open]');
+      button?.removeEventListener('click', onClick);
+      unmountOpenControl(embed);
+      const details = findNativeDetails(embed);
+      if (details) {
+        showNativeOpenControl(details);
+      }
+      embed.removeAttribute('data-ght-mermaid-native-fallback');
     }
-    this.onToggleByDetails.clear();
-
-    for (const enhancer of this.enhancements.values()) {
-      enhancer.teardown();
-    }
-    this.enhancements.clear();
+    this.onClickByEmbed.clear();
     clearWiredMarkers();
-    document.documentElement.classList.remove('ght-mermaid-enhanced-open');
+    document.documentElement.classList.remove('ght-mermaid-open');
   }
 
   private observeDocument(): void {
@@ -69,50 +76,95 @@ export class MermaidFullscreenController {
 
   private scan(): void {
     for (const embed of findMermaidEmbeds()) {
-      const details = findMermaidDetails(embed);
-      if (!details || isWired(details)) {
+      if (isWired(embed) || isNativeFallback(embed)) {
         continue;
       }
 
-      const onToggle = (): void => {
-        this.handleToggle(details);
-      };
-      details.addEventListener('toggle', onToggle);
-      this.onToggleByDetails.set(details, onToggle);
-      markWired(details);
-
-      if (details.open) {
-        this.handleToggle(details);
+      const button = mountOpenControl(embed);
+      if (!button) {
+        continue;
       }
+
+      const onClick = (event: MouseEvent): void => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.openForEmbed(embed);
+      };
+      button.addEventListener('click', onClick);
+      this.onClickByEmbed.set(embed, onClick);
+      markWired(embed);
     }
   }
 
-  private handleToggle(details: HTMLDetailsElement): void {
-    if (this.stopped) {
+  private openForEmbed(embed: HTMLElement): void {
+    if (this.stopped || isNativeFallback(embed)) {
       return;
     }
 
-    if (details.open) {
-      if (this.enhancements.has(details)) {
-        return;
-      }
-      // Let GitHub finish opening / enriching the dialog before we wrap it.
-      requestAnimationFrame(() => {
-        if (this.stopped || !details.open || this.enhancements.has(details)) {
-          return;
-        }
-        const enhancer = enhanceOpenDialog(details);
-        if (enhancer) {
-          this.enhancements.set(details, enhancer);
-        }
-      });
+    if (this.modal && this.activeEmbed === embed) {
       return;
     }
 
-    const enhancer = this.enhancements.get(details);
-    if (enhancer) {
-      enhancer.teardown();
-      this.enhancements.delete(details);
+    this.closeModal();
+    this.activeEmbed = embed;
+    this.modal = new MermaidModal({
+      onClose: () => this.closeModal(),
+      onRetry: () => {
+        if (this.activeEmbed) {
+          void this.loadSvg(this.activeEmbed);
+        }
+      },
+      onShowNative: () => this.fallbackToNative(embed),
+    });
+    void this.loadSvg(embed);
+  }
+
+  private async loadSvg(embed: HTMLElement): Promise<void> {
+    const modal = this.modal;
+    if (!modal || this.activeEmbed !== embed) {
+      return;
     }
+
+    const generation = ++this.loadGeneration;
+    modal.showLoading();
+
+    const svgMarkup = await requestRenderedSvg(embed);
+    if (
+      this.stopped ||
+      generation !== this.loadGeneration ||
+      this.modal !== modal ||
+      this.activeEmbed !== embed
+    ) {
+      return;
+    }
+
+    if (!svgMarkup || !modal.showSvg(svgMarkup)) {
+      modal.showError();
+    }
+  }
+
+  private fallbackToNative(embed: HTMLElement): void {
+    const onClick = this.onClickByEmbed.get(embed);
+    const button = embed.querySelector<HTMLElement>('[data-ght-mermaid-open]');
+    if (onClick && button) {
+      button.removeEventListener('click', onClick);
+    }
+    this.onClickByEmbed.delete(embed);
+    unmountOpenControl(embed);
+
+    const details = findNativeDetails(embed);
+    if (details) {
+      showNativeOpenControl(details);
+    }
+    markNativeFallback(embed);
+    embed.removeAttribute('data-ght-mermaid-wired');
+    this.closeModal();
+  }
+
+  private closeModal(): void {
+    this.loadGeneration += 1;
+    this.modal?.teardown();
+    this.modal = null;
+    this.activeEmbed = null;
   }
 }

@@ -72,8 +72,9 @@ export function wheelZoomFactor(deltaY: number): number {
   return deltaY < 0 ? WHEEL_ZOOM_FACTOR : 1 / WHEEL_ZOOM_FACTOR;
 }
 
+/** Pan only — zoom is applied by resizing the stage so the SVG stays crisp. */
 export function toCssTransform(transform: ViewportTransform): string {
-  return `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+  return `translate(${transform.x}px, ${transform.y}px)`;
 }
 
 export function isPanButton(button: number): boolean {

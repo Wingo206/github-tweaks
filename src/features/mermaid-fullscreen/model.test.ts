@@ -46,9 +46,9 @@ describe('mermaid viewport model', () => {
     expect(isPanButton(2)).toBe(false);
   });
 
-  it('serializes css transforms', () => {
+  it('serializes pan as a css translate (zoom is layout-sized)', () => {
     expect(toCssTransform({ scale: 1.5, x: 12, y: -3 })).toBe(
-      'translate(12px, -3px) scale(1.5)',
+      'translate(12px, -3px)',
     );
   });
 

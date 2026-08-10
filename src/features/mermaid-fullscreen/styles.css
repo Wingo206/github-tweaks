@@ -1,45 +1,82 @@
-html.ght-mermaid-enhanced-open {
+html.ght-mermaid-open {
   overflow: hidden;
 }
 
-details-dialog.render-full-screen.ght-mermaid-enhanced {
-  border-radius: 12px;
-  box-sizing: border-box;
-  display: flex !important;
-  flex-direction: column;
-  height: 90vh !important;
-  left: 5vw !important;
-  margin: 0 !important;
-  max-height: 90vh !important;
-  max-width: 90vw !important;
-  overflow: hidden !important;
-  position: fixed !important;
-  right: auto !important;
-  top: 5vh !important;
-  /* GitHub centers overlays with translateX(-50%); that shifts our sized dialog off-screen. */
-  transform: none !important;
-  width: 90vw !important;
+.ght-mermaid-modal {
+  inset: 0;
+  position: fixed;
   z-index: 1000;
 }
 
-details-dialog.render-full-screen.ght-mermaid-enhanced > div {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
+.ght-mermaid-modal__backdrop {
+  /* Transparent so the page stays visible in the margins around the dialog;
+     still captures clicks for dismiss-on-backdrop. */
+  background: transparent;
+  inset: 0;
+  position: absolute;
 }
 
-details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
+.ght-mermaid-modal__dialog {
+  background: var(--bgColor-default, var(--color-canvas-default, #ffffff));
+  border: 1px solid var(--borderColor-default, var(--color-border-default, #d0d7de));
+  border-radius: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  left: 5vw;
+  max-height: 90vh;
+  max-width: 90vw;
+  overflow: hidden;
+  position: absolute;
+  top: 5vh;
+  width: 90vw;
+}
+
+.ght-mermaid-modal__close {
+  pointer-events: auto;
+  right: 12px;
+  top: 8px;
+  z-index: 3;
+}
+
+.ght-mermaid-modal__body {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
   padding: 0;
+  position: relative;
 }
 
-.ght-mermaid-enhanced .render-full-screen-close {
-  pointer-events: auto;
-  z-index: 3;
+.ght-mermaid-modal__status {
+  align-items: center;
+  color: var(--fgColor-muted, var(--color-fg-muted, #656d76));
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  font-size: 14px;
+  gap: 12px;
+  justify-content: center;
+  min-height: 0;
+  padding: 24px;
+  text-align: center;
+}
+
+.ght-mermaid-modal__status--error {
+  color: var(--fgColor-default, var(--color-fg-default, #1f2328));
+}
+
+.ght-mermaid-modal__error-message {
+  margin: 0;
+}
+
+.ght-mermaid-modal__error-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
 }
 
 .ght-mermaid-viewport {
@@ -59,23 +96,13 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
 }
 
 .ght-mermaid-stage {
-  height: 100%;
   transform-origin: 0 0;
-  width: 100%;
-  will-change: transform;
 }
 
-.ght-mermaid-enhanced .js-render-target {
-  display: block;
-  height: 100% !important;
-  width: 100%;
-}
-
-.ght-mermaid-enhanced iframe.render-viewer {
-  border: 0;
+.ght-mermaid-svg {
   display: block;
   height: 100%;
-  /* Keep pointer events on the viewport so pan/zoom is not stolen by the iframe. */
+  max-width: none !important;
   pointer-events: none;
   width: 100%;
 }
@@ -108,8 +135,8 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
 .ght-mermaid-scrollbar__thumb {
   background: var(--borderColor-emphasis, var(--color-border-default, #8c959f));
   border-radius: 6px;
-  position: absolute;
   left: 0;
+  position: absolute;
   top: 0;
 }
 
@@ -125,4 +152,8 @@ details-dialog.render-full-screen.ght-mermaid-enhanced .Box-body {
 
 .ght-mermaid-scrollbar__thumb:hover {
   background: var(--fgColor-muted, var(--color-fg-muted, #656d76));
+}
+
+details[data-ght-mermaid-native-hidden] {
+  display: none !important;
 }
