@@ -19,6 +19,19 @@
     'overflow-y',
     'z-index',
     'box-sizing',
+    'font-family',
+    'font-size',
+    'font-weight',
+    'font-style',
+    'font-variant-numeric',
+    'line-height',
+    'letter-spacing',
+    'color',
+    'opacity',
+    'text-transform',
+    'white-space',
+    'vertical-align',
+    '-webkit-font-smoothing',
   ];
 
   if (window[GLOBAL_KEY]?.stop) {

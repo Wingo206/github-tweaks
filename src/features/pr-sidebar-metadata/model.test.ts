@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateFolder,
+  aggregateLineViewProgress,
+  formatLineViewProgressLabel,
+  lineViewProgressRatio,
   parsePullRequestUrl,
   updateFileViewedState,
 } from './model';
@@ -59,6 +62,29 @@ describe('pull request sidebar model', () => {
       viewed: 1,
       total: 2,
     });
+  });
+
+  it('aggregates viewed changed-line totals across the pull request', () => {
+    expect(aggregateLineViewProgress(snapshot.files)).toEqual({
+      viewed: 3,
+      total: 12,
+    });
+  });
+
+  it('formats combined line progress like the native viewed meter', () => {
+    expect(formatLineViewProgressLabel({ viewed: 3, total: 12 })).toBe(
+      '3 / 12 changes',
+    );
+    expect(formatLineViewProgressLabel({ viewed: 0, total: 0 })).toBe(
+      '0 / 0 changes',
+    );
+    expect(formatLineViewProgressLabel(null)).toBe('… / … changes');
+  });
+
+  it('maps line progress to a ring fill ratio', () => {
+    expect(lineViewProgressRatio({ viewed: 3, total: 12 })).toBe(0.25);
+    expect(lineViewProgressRatio({ viewed: 0, total: 0 })).toBe(1);
+    expect(lineViewProgressRatio(null)).toBeNull();
   });
 
   it('updates one file without mutating the snapshot', () => {

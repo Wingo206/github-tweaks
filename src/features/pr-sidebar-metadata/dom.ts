@@ -2,10 +2,18 @@ import type {
   PullRequestFile,
   PullRequestFilesSnapshot,
 } from '../../shared/types';
-import { aggregateFolder, isViewed } from './model';
+import {
+  aggregateFolder,
+  aggregateLineViewProgress,
+  isViewed,
+  lineViewProgressRatio,
+  type LineViewProgress,
+} from './model';
 
 const METADATA_ATTRIBUTE = 'data-ght-pr-metadata';
+const TOOLBAR_LINES_VALUE = 'toolbar-lines';
 const VIEWED_ROW_CLASS = 'ght-pr-tree-row--viewed';
+const PROGRESS_RING_CIRCUMFERENCE = 38;
 const numberFormatter = new Intl.NumberFormat();
 
 export interface SidebarCallbacks {
@@ -18,6 +26,8 @@ export class SidebarRenderer {
   constructor(private readonly callbacks: SidebarCallbacks) {}
 
   render(snapshot: PullRequestFilesSnapshot): boolean {
+    this.renderToolbarLineProgress(aggregateLineViewProgress(snapshot.files));
+
     const root = document.querySelector<HTMLElement>('#pr-file-tree');
     if (!root) {
       return false;
@@ -49,6 +59,7 @@ export class SidebarRenderer {
   }
 
   showLoading(): void {
+    this.renderToolbarLineProgress(null);
     this.showBanner('Loading pull request metadata…', 'loading');
   }
 
@@ -84,6 +95,101 @@ export class SidebarRenderer {
     document
       .querySelectorAll(`.${VIEWED_ROW_CLASS}`)
       .forEach((element) => element.classList.remove(VIEWED_ROW_CLASS));
+  }
+
+  private renderToolbarLineProgress(
+    progress: LineViewProgress | null,
+  ): void {
+    const mount = findViewedProgressMount();
+    if (!mount) {
+      return;
+    }
+
+    let metadata = mount.querySelector<HTMLElement>(
+      `[${METADATA_ATTRIBUTE}="${TOOLBAR_LINES_VALUE}"]`,
+    );
+    if (!metadata) {
+      metadata = document.createElement('span');
+      metadata.className = 'ght-pr-toolbar-lines';
+      metadata.setAttribute(METADATA_ATTRIBUTE, TOOLBAR_LINES_VALUE);
+      metadata.innerHTML = `
+        <span aria-hidden="true" class="ght-pr-toolbar-lines__visible">
+          <span class="ght-pr-toolbar-lines__separator">·</span>
+          <svg
+            class="ght-pr-toolbar-lines__ring"
+            data-circumference="${PROGRESS_RING_CIRCUMFERENCE}"
+            height="16"
+            role="presentation"
+            width="16"
+          >
+            <circle
+              class="ght-pr-toolbar-lines__ring-track"
+              cx="50%"
+              cy="50%"
+              fill="transparent"
+              r="6"
+              stroke-width="2"
+            ></circle>
+            <circle
+              class="ght-pr-toolbar-lines__ring-value"
+              cx="50%"
+              cy="50%"
+              fill="transparent"
+              r="6"
+              stroke-dasharray="${PROGRESS_RING_CIRCUMFERENCE}"
+              stroke-dashoffset="${PROGRESS_RING_CIRCUMFERENCE}"
+              stroke-linecap="round"
+              stroke-width="2"
+            ></circle>
+          </svg>
+          <span class="ght-pr-toolbar-lines__counts">
+            <span class="ght-pr-toolbar-lines__count ght-pr-toolbar-lines__count--viewed"></span>
+            <span class="ght-pr-toolbar-lines__slash"> / </span>
+            <span class="ght-pr-toolbar-lines__count ght-pr-toolbar-lines__count--total"></span>
+            <span class="ght-pr-toolbar-lines__suffix"> changes</span>
+          </span>
+        </span>
+        <span class="sr-only"></span>
+      `;
+      mount.append(metadata);
+    }
+
+    const viewedCount = metadata.querySelector<HTMLElement>(
+      '.ght-pr-toolbar-lines__count--viewed',
+    );
+    const totalCount = metadata.querySelector<HTMLElement>(
+      '.ght-pr-toolbar-lines__count--total',
+    );
+    const ringValue = metadata.querySelector<SVGCircleElement>(
+      '.ght-pr-toolbar-lines__ring-value',
+    );
+    const srOnly = metadata.querySelector<HTMLElement>('.sr-only');
+    const ratio = lineViewProgressRatio(progress);
+    const viewedLabel = progress
+      ? numberFormatter.format(progress.viewed)
+      : '…';
+    const totalLabel = progress
+      ? numberFormatter.format(progress.total)
+      : '…';
+
+    if (viewedCount) {
+      viewedCount.textContent = viewedLabel;
+    }
+    if (totalCount) {
+      totalCount.textContent = totalLabel;
+    }
+    if (ringValue) {
+      const offset =
+        ratio === null
+          ? PROGRESS_RING_CIRCUMFERENCE
+          : PROGRESS_RING_CIRCUMFERENCE * (1 - ratio);
+      ringValue.setAttribute('stroke-dashoffset', String(offset));
+    }
+    if (srOnly) {
+      srOnly.textContent = progress
+        ? `${viewedLabel} of ${totalLabel} changes viewed`
+        : 'Line view progress loading';
+    }
   }
 
   private renderFileRow(row: HTMLElement, file: PullRequestFile): void {
@@ -258,6 +364,21 @@ export function getNativeViewedPath(button: HTMLButtonElement): string | null {
     ?.textContent?.replace(/[\u200e\u200f]/g, '')
     .trim();
   return text || null;
+}
+
+function findViewedProgressMount(): HTMLElement | null {
+  const toolbar = Array.from(
+    document.querySelectorAll<HTMLElement>('h2.sr-only'),
+  ).find((heading) => heading.textContent?.trim() === 'Pull request toolbar')
+    ?.closest('section');
+  if (!toolbar) {
+    return null;
+  }
+
+  const fileProgress = Array.from(
+    toolbar.querySelectorAll<HTMLElement>('.sr-only'),
+  ).find((element) => /files viewed/i.test(element.textContent ?? ''));
+  return fileProgress?.parentElement ?? null;
 }
 
 function findContentContainer(row: HTMLElement): HTMLElement | null {

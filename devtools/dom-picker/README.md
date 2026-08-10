@@ -31,7 +31,7 @@ pnpm dump-receiver
 4. Agent reads `devtools/dom-picker/dumps/latest.html` (and `.json` for attrs /
    optional computed styles) and asks for another pick if needed.
 
-Optional: check **Include key computed styles** before picking (layout bugs).
+Optional: check **Include key computed styles** before picking (layout or typography matching).
 
 ## Receiver API
 

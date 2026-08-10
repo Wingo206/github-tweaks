@@ -108,7 +108,9 @@ describe('handback DOM adapter', () => {
       errorMessage: null,
       onHandback: vi.fn(),
     });
-    const button = root.querySelector(`.${HANDBACK_BUTTON_CLASS}`)!;
+    const button = root.querySelector<HTMLButtonElement>(
+      `.${HANDBACK_BUTTON_CLASS}`,
+    )!;
     expect(button.textContent).toBe('Updating…');
     expect(button.disabled).toBe(true);
 

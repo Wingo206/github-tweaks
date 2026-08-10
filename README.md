@@ -15,6 +15,7 @@ On a pull request's changed-files page, GitHub Tweaks adds:
 - a Viewed checkbox synchronized with GitHub's native Viewed control
 - dimmed file rows after they are marked Viewed, including completed folders
 - remaining unviewed line counts and `viewed/total` progress on directory rows
+- `X / N changes` line progress with a circular meter beside the sticky file viewed control
 - immediate cached results followed by a fresh GitHub API update
 
 The feature supports GitHub's `/pull/:number/changes` and legacy

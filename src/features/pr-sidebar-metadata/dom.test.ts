@@ -16,6 +16,10 @@ const diffFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/file-diff.html'),
   'utf8',
 );
+const toolbarFixture = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/files-toolbar.html'),
+  'utf8',
+);
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },
@@ -96,6 +100,72 @@ describe('GitHub DOM adapter and renderer', () => {
     renderer.clear();
     expect(binaryRow.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
     expect(folder.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
+  });
+
+  it('appends combined line progress beside the toolbar viewed meter', () => {
+    document.body.innerHTML = toolbarFixture;
+    const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
+      onRetry: vi.fn(),
+      onOpenSetup: vi.fn(),
+    });
+
+    renderer.showLoading();
+    const loading = document.querySelector(
+      '[data-ght-pr-metadata="toolbar-lines"]',
+    );
+    expect(loading?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      '… / … changes',
+    );
+
+    expect(renderer.render(snapshot)).toBe(false);
+    expect(renderer.render(snapshot)).toBe(false);
+
+    const metadata = document.querySelector(
+      '[data-ght-pr-metadata="toolbar-lines"]',
+    );
+    expect(
+      document.querySelectorAll('[data-ght-pr-metadata="toolbar-lines"]'),
+    ).toHaveLength(1);
+    expect(
+      metadata
+        ?.querySelector('.ght-pr-toolbar-lines__counts')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('0 / 7 changes');
+    expect(
+      metadata
+        ?.querySelector('.ght-pr-toolbar-lines__ring-value')
+        ?.getAttribute('stroke-dashoffset'),
+    ).toBe('38');
+    expect(metadata?.querySelector('.sr-only')?.textContent).toBe(
+      '0 of 7 changes viewed',
+    );
+
+    renderer.render({
+      ...snapshot,
+      files: snapshot.files.map((file) =>
+        file.path === 'src/index.ts'
+          ? { ...file, viewedState: 'VIEWED' as const }
+          : file,
+      ),
+    });
+    expect(
+      metadata
+        ?.querySelector('.ght-pr-toolbar-lines__counts')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('7 / 7 changes');
+    expect(
+      metadata
+        ?.querySelector('.ght-pr-toolbar-lines__ring-value')
+        ?.getAttribute('stroke-dashoffset'),
+    ).toBe('0');
+
+    renderer.clear();
+    expect(
+      document.querySelector('[data-ght-pr-metadata="toolbar-lines"]'),
+    ).toBeNull();
   });
 
   it('emits sidebar checkbox changes', () => {

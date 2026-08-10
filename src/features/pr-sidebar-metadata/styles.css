@@ -66,6 +66,62 @@
   padding-left: 0.35rem;
 }
 
+.ght-pr-toolbar-lines {
+  color: var(--fgColor-muted, var(--color-fg-muted, #59636e));
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ght-pr-toolbar-lines__visible {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.ght-pr-toolbar-lines__separator {
+  color: inherit;
+}
+
+.ght-pr-toolbar-lines__ring {
+  display: block;
+  flex: 0 0 auto;
+  transform: rotate(-90deg);
+}
+
+.ght-pr-toolbar-lines__ring-track {
+  stroke: var(--borderColor-default, var(--color-border-default, #d0d7de));
+}
+
+.ght-pr-toolbar-lines__ring-value {
+  stroke: var(--fgColor-done, var(--color-done-fg, #8250df));
+  transition: stroke-dashoffset 0.35s;
+}
+
+.ght-pr-toolbar-lines__counts {
+  display: inline;
+  overflow: hidden;
+}
+
+.ght-pr-toolbar-lines__count,
+.ght-pr-toolbar-lines__slash,
+.ght-pr-toolbar-lines__suffix {
+  font: inherit;
+}
+
+.ght-pr-toolbar-lines__count {
+  color: var(--fgColor-default, var(--color-fg-default, #1f2328));
+  font-weight: 500;
+}
+
+.ght-pr-toolbar-lines__slash,
+.ght-pr-toolbar-lines__suffix {
+  color: inherit;
+  font-weight: 400;
+}
+
 .ght-pr-metadata__viewed {
   align-items: center;
   cursor: pointer;
