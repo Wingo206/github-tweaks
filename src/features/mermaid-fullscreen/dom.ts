@@ -171,11 +171,14 @@ export function unmountOpenControl(embed: HTMLElement): void {
 }
 
 export function parseRenderedSvg(markup: string): SVGSVGElement | null {
-  const parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
-  const svg = parsed.documentElement;
+  // Mermaid serializes HTML labels inside <foreignObject> using HTML void
+  // elements such as <br>. Parsing that markup as XML rejects otherwise valid
+  // browser-rendered diagrams, so parse it in an inert HTML document instead.
+  const parsed = new DOMParser().parseFromString(markup, 'text/html');
+  const svg = parsed.body.firstElementChild;
   if (
-    svg.localName !== 'svg' ||
-    parsed.querySelector('parsererror') ||
+    parsed.body.childElementCount !== 1 ||
+    svg?.localName !== 'svg' ||
     !(svg instanceof SVGSVGElement)
   ) {
     return null;

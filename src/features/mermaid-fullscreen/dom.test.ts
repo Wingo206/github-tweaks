@@ -41,6 +41,10 @@ const svgFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/mermaid-svg.html'),
   'utf8',
 );
+const svgHtmlLabelFixture = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/mermaid-svg-html-label.html'),
+  'utf8',
+);
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -93,6 +97,15 @@ describe('mermaid DOM helpers', () => {
     });
     expect(svg?.querySelector('marker')).toBeTruthy();
     expect(svg?.querySelector('foreignObject')).toBeTruthy();
+  });
+
+  it('parses serialized Mermaid HTML labels with void elements', () => {
+    const svg = parseRenderedSvg(svgHtmlLabelFixture);
+
+    expect(svg).toBeInstanceOf(SVGSVGElement);
+    expect(svg?.querySelector('foreignObject p')?.textContent).toBe(
+      'First lineSecond line',
+    );
   });
 });
 
