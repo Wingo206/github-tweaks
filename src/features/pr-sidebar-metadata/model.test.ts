@@ -4,13 +4,16 @@ import {
   aggregateLineViewProgress,
   formatLineViewProgressLabel,
   lineViewProgressRatio,
+  parseChangeSelection,
   parsePullRequestUrl,
+  sameChangeSelection,
   updateFileViewedState,
 } from './model';
 import type { PullRequestFilesSnapshot } from '../../shared/types';
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },
+  selection: { kind: 'all' },
   pullRequestId: 'PR_1',
   headOid: 'abc',
   savedAt: 1,
@@ -53,6 +56,44 @@ describe('pull request sidebar model', () => {
         new URL('https://github.com/acme/widgets/pull/42/checks'),
       ),
     ).toBeNull();
+  });
+
+  it('parses all, single-commit, and inclusive range selections', () => {
+    expect(
+      parseChangeSelection(
+        new URL('https://github.com/acme/widgets/pull/42/changes'),
+      ),
+    ).toEqual({ kind: 'all' });
+    expect(
+      parseChangeSelection(
+        new URL(
+          'https://github.com/acme/widgets/pull/42/changes/abcdef1',
+        ),
+      ),
+    ).toEqual({ kind: 'commit', oid: 'abcdef1' });
+    expect(
+      parseChangeSelection(
+        new URL(
+          'https://github.com/acme/widgets/pull/42/changes/abcdef1..1234567',
+        ),
+      ),
+    ).toEqual({
+      kind: 'range',
+      startOid: 'abcdef1',
+      endOid: '1234567',
+    });
+    expect(
+      sameChangeSelection(
+        { kind: 'commit', oid: 'abcdef1' },
+        { kind: 'commit', oid: 'abcdef1' },
+      ),
+    ).toBe(true);
+    expect(
+      sameChangeSelection(
+        { kind: 'commit', oid: 'abcdef1' },
+        { kind: 'commit', oid: '1234567' },
+      ),
+    ).toBe(false);
   });
 
   it('aggregates line counts from unviewed descendants only', () => {

@@ -1,8 +1,10 @@
 import {
   cachePullRequest,
   getCachedPullRequest,
+  getPeoplePins,
   getToken,
   removeToken,
+  savePeoplePins,
   saveToken,
 } from '../src/github/storage';
 import { validateToken } from '../src/github/graphql';
@@ -10,15 +12,8 @@ import {
   handbackAssignee,
   loadHandbackContext,
 } from '../src/github/pullRequestAssignees';
-import {
-  loadPullRequestFiles,
-  setFileViewed,
-} from '../src/github/pullRequestFiles';
-import type {
-  BackgroundRequest,
-  BackgroundResponse,
-  PullRequestFilesSnapshot,
-} from '../src/shared/types';
+import { loadPullRequestFiles } from '../src/github/pullRequestFiles';
+import type { BackgroundRequest, BackgroundResponse } from '../src/shared/types';
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
@@ -67,23 +62,16 @@ async function handleRequest(request: BackgroundRequest): Promise<unknown> {
       await browser.action.openPopup();
       return undefined;
     case 'cache:get':
-      return getCachedPullRequest(request.ref);
+      return getCachedPullRequest(request.ref, request.selection);
     case 'pull:load': {
       const token = await requireToken();
-      const snapshot = await loadPullRequestFiles(token, request.ref);
+      const snapshot = await loadPullRequestFiles(
+        token,
+        request.ref,
+        request.selection,
+      );
       await cachePullRequest(snapshot);
       return snapshot;
-    }
-    case 'pull:set-viewed': {
-      const token = await requireToken();
-      await setFileViewed(
-        token,
-        request.pullRequestId,
-        request.path,
-        request.viewed,
-      );
-      await updateCachedViewedState(request);
-      return undefined;
     }
     case 'pull:handback-context': {
       const token = await requireToken();
@@ -93,6 +81,14 @@ async function handleRequest(request: BackgroundRequest): Promise<unknown> {
       const token = await requireToken();
       return handbackAssignee(token, request.ref);
     }
+    case 'pins:get':
+      return getPeoplePins(request.owner, request.repository);
+    case 'pins:save':
+      return savePeoplePins(
+        request.owner,
+        request.repository,
+        request.people,
+      );
   }
 }
 
@@ -106,25 +102,3 @@ async function requireToken(): Promise<string> {
   return token;
 }
 
-async function updateCachedViewedState(
-  request: Extract<BackgroundRequest, { type: 'pull:set-viewed' }>,
-): Promise<void> {
-  const cached = await getCachedPullRequest(request.ref);
-  if (!cached || cached.pullRequestId !== request.pullRequestId) {
-    return;
-  }
-
-  const snapshot: PullRequestFilesSnapshot = {
-    ...cached,
-    files: cached.files.map((file) =>
-      file.path === request.path
-        ? {
-            ...file,
-            viewedState: request.viewed ? 'VIEWED' : 'UNVIEWED',
-          }
-        : file,
-    ),
-    savedAt: Date.now(),
-  };
-  await cachePullRequest(snapshot);
-}

@@ -20,9 +20,14 @@ const toolbarFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/files-toolbar.html'),
   'utf8',
 );
+const rangeToolbarFixture = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/files-toolbar-range.html'),
+  'utf8',
+);
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },
+  selection: { kind: 'all' },
   pullRequestId: 'PR_1',
   headOid: 'head',
   savedAt: 1,
@@ -46,7 +51,6 @@ describe('GitHub DOM adapter and renderer', () => {
   it('renders file metadata and stable folder totals idempotently', () => {
     document.body.innerHTML = sidebarFixture;
     const renderer = new SidebarRenderer({
-      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -59,17 +63,23 @@ describe('GitHub DOM adapter and renderer', () => {
       fileRow.querySelector('.ght-pr-metadata__counts')?.textContent,
     ).toBe('+5-2');
     expect(fileRow.querySelectorAll('[data-ght-pr-metadata]')).toHaveLength(1);
-    expect(
-      fileRow.querySelector<HTMLInputElement>('input')?.checked,
-    ).toBe(false);
+    const fileIndicator =
+      fileRow.querySelector<HTMLInputElement>(
+        '.ght-pr-metadata__viewed input',
+      )!;
+    expect(fileIndicator.checked).toBe(false);
+    expect(fileIndicator.disabled).toBe(true);
 
     const binaryRow = document.getElementById('src/empty.png')!;
     expect(
       binaryRow.querySelector('.ght-pr-metadata__counts')?.textContent,
     ).toBe('—');
-    expect(
-      binaryRow.querySelector<HTMLInputElement>('input')?.checked,
-    ).toBe(true);
+    const binaryIndicator =
+      binaryRow.querySelector<HTMLInputElement>(
+        '.ght-pr-metadata__viewed input',
+      )!;
+    expect(binaryIndicator.checked).toBe(true);
+    expect(binaryIndicator.disabled).toBe(true);
     expect(binaryRow.classList.contains('ght-pr-tree-row--viewed')).toBe(true);
     expect(fileRow.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
 
@@ -105,7 +115,6 @@ describe('GitHub DOM adapter and renderer', () => {
   it('appends combined line progress beside the toolbar viewed meter', () => {
     document.body.innerHTML = toolbarFixture;
     const renderer = new SidebarRenderer({
-      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -168,23 +177,20 @@ describe('GitHub DOM adapter and renderer', () => {
     ).toBeNull();
   });
 
-  it('emits sidebar checkbox changes', () => {
-    document.body.innerHTML = sidebarFixture;
-    const onViewedChange = vi.fn();
+  it('renders line progress when a commit range hides native progress', () => {
+    document.body.innerHTML = rangeToolbarFixture;
     const renderer = new SidebarRenderer({
-      onViewedChange,
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
-    renderer.render(snapshot);
 
-    const checkbox = document
-      .getElementById('src/index.ts')!
-      .querySelector<HTMLInputElement>('input')!;
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-
-    expect(onViewedChange).toHaveBeenCalledWith('src/index.ts', true);
+    expect(renderer.render(snapshot)).toBe(false);
+    expect(
+      document.querySelector(
+        '.PullRequestFilesToolbar-module__file-controls ' +
+          '[data-ght-pr-metadata="toolbar-lines"]',
+      ),
+    ).not.toBeNull();
   });
 
   it('maps native Viewed buttons to full paths', () => {

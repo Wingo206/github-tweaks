@@ -2,6 +2,7 @@ import {
   isSvgRequest,
   postRenderedSvgResponse,
 } from '../src/features/mermaid-fullscreen/bridge';
+import { describeMissingDiagram } from '../src/features/mermaid-fullscreen/errors';
 
 const GITHUB_ORIGIN = 'https://github.com';
 const SVG_SELECTOR = 'svg#diagram';
@@ -49,11 +50,26 @@ export default defineContentScript({
 
       const { requestId } = event.data;
       void waitForDiagramSvg().then((svg) => {
+        if (!svg) {
+          const detail = describeMissingDiagram(document);
+          console.error(
+            '[ght-mermaid] diagram SVG missing in viewscreen',
+            detail,
+          );
+          postRenderedSvgResponse(
+            window.parent,
+            GITHUB_ORIGIN,
+            requestId,
+            null,
+            detail,
+          );
+          return;
+        }
         postRenderedSvgResponse(
           window.parent,
           GITHUB_ORIGIN,
           requestId,
-          svg?.outerHTML ?? null,
+          svg.outerHTML,
         );
       });
     });

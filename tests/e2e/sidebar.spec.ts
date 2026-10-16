@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
 
-test('renders metadata and toggles Viewed through GraphQL', async () => {
+test('renders metadata with read-only Viewed indicators', async () => {
   const extensionPath = resolve(process.cwd(), '.output/chrome-mv3');
   const sidebar = readFileSync(
     resolve(process.cwd(), 'tests/fixtures/sidebar.html'),
@@ -21,7 +21,6 @@ test('renders metadata and toggles Viewed through GraphQL', async () => {
     ],
   });
 
-  let viewedMutationCount = 0;
   await context.route('https://api.github.com/graphql', async (route) => {
     const request = route.request();
     const payload = request.postDataJSON() as {
@@ -57,19 +56,6 @@ test('renders metadata and toggles Viewed through GraphQL', async () => {
                 },
               },
             },
-          },
-        }),
-      });
-      return;
-    }
-
-    if (payload.query.includes('markFileAsViewed')) {
-      viewedMutationCount += 1;
-      await route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            markFileAsViewed: { pullRequest: { id: 'PR_1' } },
           },
         }),
       });
@@ -112,10 +98,15 @@ test('renders metadata and toggles Viewed through GraphQL', async () => {
       page.locator('[id="src"] .ght-pr-metadata__progress'),
     ).toHaveText('1/2');
 
-    const checkbox = indexRow.locator('input[type="checkbox"]');
-    await checkbox.check();
-    await expect(checkbox).toBeChecked();
-    await expect.poll(() => viewedMutationCount).toBe(1);
+    const indexViewed = indexRow.locator('input[type="checkbox"]');
+    await expect(indexViewed).toBeVisible();
+    await expect(indexViewed).toBeDisabled();
+    await expect(indexViewed).not.toBeChecked();
+    const binaryViewed = page.locator(
+      '[id="src/empty.png"] input[type="checkbox"]',
+    );
+    await expect(binaryViewed).toBeDisabled();
+    await expect(binaryViewed).toBeChecked();
   } finally {
     await context.close();
   }

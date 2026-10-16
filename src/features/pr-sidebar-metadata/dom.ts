@@ -17,7 +17,6 @@ const PROGRESS_RING_CIRCUMFERENCE = 38;
 const numberFormatter = new Intl.NumberFormat();
 
 export interface SidebarCallbacks {
-  onViewedChange(path: string, viewed: boolean): void;
   onRetry(): void;
   onOpenSetup(): void;
 }
@@ -65,27 +64,6 @@ export class SidebarRenderer {
 
   showError(message: string): void {
     this.showBanner(message, 'error');
-  }
-
-  showFileError(path: string, message: string): void {
-    const row = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '#pr-file-tree li[role="treeitem"][id]',
-      ),
-    ).find((candidate) => candidate.id === path);
-    const metadata = row?.querySelector<HTMLElement>(
-      `[${METADATA_ATTRIBUTE}="file"]`,
-    );
-    if (!metadata) {
-      return;
-    }
-
-    metadata.classList.add('ght-pr-metadata--error');
-    metadata.title = message;
-    window.setTimeout(() => {
-      metadata.classList.remove('ght-pr-metadata--error');
-      metadata.removeAttribute('title');
-    }, 6_000);
   }
 
   clear(): void {
@@ -206,16 +184,10 @@ export class SidebarRenderer {
       metadata.setAttribute(METADATA_ATTRIBUTE, 'file');
       metadata.innerHTML = `
         <span class="ght-pr-metadata__counts"></span>
-        <label class="ght-pr-metadata__viewed" title="Mark file as viewed">
-          <input type="checkbox">
-          <span class="sr-only">Viewed</span>
-        </label>
+        <span class="ght-pr-metadata__viewed" title="Viewed state is controlled by GitHub">
+          <input type="checkbox" disabled tabindex="-1">
+        </span>
       `;
-      metadata.addEventListener('click', (event) => event.stopPropagation());
-      const checkbox = metadata.querySelector<HTMLInputElement>('input');
-      checkbox?.addEventListener('change', () => {
-        this.callbacks.onViewedChange(file.path, checkbox.checked);
-      });
       container.append(metadata);
     }
 
@@ -226,16 +198,15 @@ export class SidebarRenderer {
       renderCounts(counts, file.additions, file.deletions);
     }
 
-    const checkbox = metadata.querySelector<HTMLInputElement>('input');
-    if (checkbox) {
-      checkbox.checked = isViewed(file.viewedState);
-      checkbox.setAttribute(
-        'aria-label',
-        `${checkbox.checked ? 'Unmark' : 'Mark'} ${file.path} as viewed`,
+    const viewedIndicator =
+      metadata.querySelector<HTMLInputElement>(
+        '.ght-pr-metadata__viewed input',
       );
-      checkbox.parentElement?.setAttribute(
-        'title',
-        checkbox.checked ? 'Unmark file as viewed' : 'Mark file as viewed',
+    if (viewedIndicator) {
+      viewedIndicator.checked = isViewed(file.viewedState);
+      viewedIndicator.setAttribute(
+        'aria-label',
+        `${file.path} is ${viewedIndicator.checked ? 'viewed' : 'not viewed'}`,
       );
     }
   }
@@ -378,7 +349,17 @@ function findViewedProgressMount(): HTMLElement | null {
   const fileProgress = Array.from(
     toolbar.querySelectorAll<HTMLElement>('.sr-only'),
   ).find((element) => /files viewed/i.test(element.textContent ?? ''));
-  return fileProgress?.parentElement ?? null;
+  if (fileProgress?.parentElement) {
+    return fileProgress.parentElement;
+  }
+
+  const reviewButton = Array.from(
+    toolbar.querySelectorAll<HTMLButtonElement>('button'),
+  ).find((button) => /^(submit review|review)$/i.test(
+    button.textContent?.trim() ?? '',
+  ));
+  const controls = reviewButton?.previousElementSibling;
+  return controls instanceof HTMLElement ? controls : null;
 }
 
 function findContentContainer(row: HTMLElement): HTMLElement | null {

@@ -1,0 +1,85 @@
+<form aria-label="Select reviewers" action="/acme/widgets/pull/42/review-requests" method="post">
+  <details id="reviewers-select-menu" class="details-reset details-overlay select-menu" open>
+    <summary>Reviewers</summary>
+    <details-menu class="select-menu-modal" role="menu">
+      <div class="select-menu-header">
+        <span class="select-menu-title">Request up to 15 reviewers</span>
+      </div>
+      <div class="hx_rsm-content" role="menu">
+        <div class="select-menu-filters">
+          <input id="review-filter-field" class="js-filterable-field" type="text" placeholder="Find a user" aria-label="Find a user">
+        </div>
+        <div class="select-menu-list">
+          <div class="select-menu-no-results">Nothing to show</div>
+          <div data-filterable-for="review-filter-field" data-filterable-type="substring-memory" data-filterable-type-ahead data-filterable-allow-empty-search data-filterable-src="/acme/widgets/pull/42/review-requests">
+            <template>
+              <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="false">
+                <input type="checkbox" value="" name="reviewer_user_ids[]">
+                <img alt="" class="js-avatar">
+                <span class="js-username"></span>
+                <span class="description js-description"></span>
+              </label>
+            </template>
+            <div class="select-menu-divider js-divider-suggestions">Suggestions</div>
+            <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="true">
+              <input type="checkbox" value="11" name="reviewer_user_ids[]" checked>
+              <img alt="" class="js-avatar" src="https://avatars.githubusercontent.com/u/11?s=40&amp;v=4">
+              <span class="js-username">cara</span>
+              <span class="description js-description">Cara Cole</span>
+            </label>
+            <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="false">
+              <input type="checkbox" value="22" name="reviewer_user_ids[]">
+              <img alt="" class="js-avatar" src="https://avatars.githubusercontent.com/u/22?s=40&amp;v=4">
+              <span class="js-username">ben</span>
+              <span class="description js-description">Ben Adey</span>
+            </label>
+            <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="false">
+              <input type="checkbox" value="99" name="reviewer_team_ids[]">
+              <img alt="" class="js-avatar" src="https://avatars.githubusercontent.com/t/99?s=40&amp;v=4">
+              <span class="js-username">acme/platform</span>
+              <span class="description js-description">Platform</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </details-menu>
+  </details>
+  <span data-assignee-name="cara">cara</span>
+  <span data-assignee-name="erin">erin</span>
+</form>
+
+<form aria-label="Select assignees" action="/acme/widgets/issues/42/assignees" method="post">
+  <details id="assignees-select-menu" class="details-reset details-overlay select-menu" open>
+    <summary>Assignees</summary>
+    <details-menu class="select-menu-modal" role="menu">
+      <div class="select-menu-header">
+        <span class="select-menu-title">Assign up to 10 people to this pull request</span>
+      </div>
+      <div class="hx_rsm-content" role="menu">
+        <div class="select-menu-filters">
+          <input id="assignee-filter-field" class="js-filterable-field" type="text" placeholder="Find a user" aria-label="Find a user">
+        </div>
+        <div class="select-menu-list">
+          <div class="select-menu-no-results">Nothing to show</div>
+          <div data-filterable-for="assignee-filter-field" data-filterable-type="substring-memory" data-filterable-type-ahead data-filterable-src="/acme/widgets/issues/42/show_partial?partial=issues%2Fsidebar%2Fassignees_menu_content">
+            <template>
+              <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="false">
+                <input type="checkbox" value="" name="issue[user_assignee_ids][]">
+                <img alt="" class="js-avatar">
+                <span class="js-username"></span>
+                <span class="description js-description"></span>
+              </label>
+            </template>
+            <label class="select-menu-item text-normal" role="menuitemcheckbox" aria-checked="false" hidden>
+              <input type="checkbox" value="33" name="issue[user_assignee_ids][]">
+              <img alt="" class="js-avatar" src="https://avatars.githubusercontent.com/u/33?s=40&amp;v=4">
+              <span class="js-username">ada</span>
+              <span class="description js-description">Ada Lovelace</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </details-menu>
+  </details>
+  <span class="js-issue-assignees"></span>
+</form>

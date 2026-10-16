@@ -14,6 +14,7 @@ const pageFixture = [
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },
+  selection: { kind: 'all' },
   pullRequestId: 'PR_1',
   headOid: 'head',
   savedAt: 1,
@@ -34,43 +35,7 @@ const snapshot: PullRequestFilesSnapshot = {
 };
 
 describe('PR sidebar controller', () => {
-  it('rolls back an optimistic Viewed update when GitHub rejects it', async () => {
-    document.body.innerHTML = pageFixture;
-    const sendMessage = vi.mocked(browser.runtime.sendMessage);
-    sendMessage.mockImplementation(async (request: unknown) => {
-      const typedRequest = request as BackgroundRequest;
-      if (typedRequest.type === 'cache:get') {
-        return { ok: true, data: snapshot };
-      }
-      if (typedRequest.type === 'pull:load') {
-        return { ok: true, data: snapshot };
-      }
-      if (typedRequest.type === 'pull:set-viewed') {
-        return { ok: false, error: 'Mutation denied.' };
-      }
-      return { ok: true };
-    });
-
-    const controller = new PrSidebarController(snapshot.ref);
-    await controller.start();
-    const checkbox = document
-      .getElementById('src/index.ts')!
-      .querySelector<HTMLInputElement>('input')!;
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-    await settle();
-
-    expect(checkbox.checked).toBe(false);
-    expect(
-      document
-        .getElementById('src/index.ts')!
-        .querySelector('.ght-pr-metadata')
-        ?.classList.contains('ght-pr-metadata--error'),
-    ).toBe(true);
-    controller.stop();
-  });
-
-  it('mirrors native Viewed changes without issuing a duplicate mutation', async () => {
+  it('mirrors native Viewed changes in the read-only indicator', async () => {
     document.body.innerHTML = pageFixture;
     const sendMessage = vi.mocked(browser.runtime.sendMessage);
     sendMessage.mockImplementation(async (request: unknown) => {
@@ -97,13 +62,15 @@ describe('PR sidebar controller', () => {
     expect(
       document
         .getElementById('src/index.ts')!
-        .querySelector<HTMLInputElement>('input')?.checked,
+        .querySelector<HTMLInputElement>(
+          '.ght-pr-metadata__viewed input',
+        )?.checked,
     ).toBe(true);
     expect(
       sendMessage.mock.calls.some(
         ([request]) =>
-          (request as unknown as BackgroundRequest).type ===
-          'pull:set-viewed',
+          (request as unknown as BackgroundRequest).type !== 'cache:get' &&
+          (request as unknown as BackgroundRequest).type !== 'pull:load',
       ),
     ).toBe(false);
     controller.stop();

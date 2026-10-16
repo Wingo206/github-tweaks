@@ -1,4 +1,5 @@
 import type {
+  PullRequestChangeSelection,
   PullRequestFile,
   PullRequestFilesSnapshot,
   ViewedState,
@@ -116,4 +117,45 @@ export function parsePullRequestUrl(url: URL) {
     repository: decodeURIComponent(repository),
     number: Number(number),
   };
+}
+
+export function parseChangeSelection(url: URL): PullRequestChangeSelection {
+  const match = url.pathname.match(
+    /^\/[^/]+\/[^/]+\/pull\/\d+\/(?:files|changes)(?:\/([^/]+))?\/?$/,
+  );
+  const value = match?.[1];
+  if (!value) {
+    return { kind: 'all' };
+  }
+
+  const range = value.match(/^([0-9a-f]{7,64})\.\.([0-9a-f]{7,64})$/i);
+  if (range?.[1] && range[2]) {
+    return {
+      kind: 'range',
+      startOid: range[1],
+      endOid: range[2],
+    };
+  }
+
+  return /^[0-9a-f]{7,64}$/i.test(value)
+    ? { kind: 'commit', oid: value }
+    : { kind: 'all' };
+}
+
+export function sameChangeSelection(
+  left: PullRequestChangeSelection,
+  right: PullRequestChangeSelection,
+): boolean {
+  if (left.kind !== right.kind) {
+    return false;
+  }
+  if (left.kind === 'commit' && right.kind === 'commit') {
+    return left.oid === right.oid;
+  }
+  if (left.kind === 'range' && right.kind === 'range') {
+    return (
+      left.startOid === right.startOid && left.endOid === right.endOid
+    );
+  }
+  return left.kind === 'all' && right.kind === 'all';
 }

@@ -1,7 +1,15 @@
-import type { PageStatus, PullRequestRef } from '../../shared/types';
+import type {
+  PageStatus,
+  PullRequestChangeSelection,
+  PullRequestRef,
+} from '../../shared/types';
 import type { Feature, FeatureContext } from '../types';
 import { PrSidebarController } from './controller';
-import { parsePullRequestUrl } from './model';
+import {
+  parseChangeSelection,
+  parsePullRequestUrl,
+  sameChangeSelection,
+} from './model';
 import './styles.css';
 
 export class PrSidebarMetadataFeature implements Feature {
@@ -18,18 +26,30 @@ export class PrSidebarMetadataFeature implements Feature {
       return;
     }
 
-    this.controller = new PrSidebarController(ref);
+    this.controller = new PrSidebarController(
+      ref,
+      parseChangeSelection(url),
+    );
     void this.controller.start();
   }
 
   update({ url }: FeatureContext): void {
     const ref = parsePullRequestUrl(url);
-    if (!ref || sameRef(ref, this.controller?.ref)) {
+    const selection = parseChangeSelection(url);
+    if (
+      !ref ||
+      sameView(
+        ref,
+        selection,
+        this.controller?.ref,
+        this.controller?.selection,
+      )
+    ) {
       return;
     }
 
     this.stop();
-    this.controller = new PrSidebarController(ref);
+    this.controller = new PrSidebarController(ref, selection);
     void this.controller.start();
   }
 
@@ -47,14 +67,18 @@ export class PrSidebarMetadataFeature implements Feature {
   }
 }
 
-function sameRef(
+function sameView(
   left: PullRequestRef,
+  leftSelection: PullRequestChangeSelection,
   right: PullRequestRef | undefined,
+  rightSelection: PullRequestChangeSelection | undefined,
 ): boolean {
   return (
     !!right &&
+    !!rightSelection &&
     left.owner === right.owner &&
     left.repository === right.repository &&
-    left.number === right.number
+    left.number === right.number &&
+    sameChangeSelection(leftSelection, rightSelection)
   );
 }

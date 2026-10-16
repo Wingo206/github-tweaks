@@ -124,24 +124,18 @@
 
 .ght-pr-metadata__viewed {
   align-items: center;
-  cursor: pointer;
   display: inline-flex;
   margin: 0;
 }
 
 .ght-pr-metadata__viewed input {
   accent-color: var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #0969da));
-  cursor: pointer;
+  cursor: default;
   height: 14px;
   margin: 0;
+  opacity: 1;
+  pointer-events: none;
   width: 14px;
-}
-
-.ght-pr-metadata--error {
-  border-radius: 4px;
-  outline: 2px solid
-    var(--borderColor-danger-emphasis, var(--color-danger-emphasis, #cf222e));
-  outline-offset: 2px;
 }
 
 .ght-pr-banner {

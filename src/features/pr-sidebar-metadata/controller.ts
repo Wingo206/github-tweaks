@@ -1,6 +1,7 @@
 import { sendBackgroundMessage } from '../../shared/messaging';
 import type {
   PageStatus,
+  PullRequestChangeSelection,
   PullRequestFilesSnapshot,
   PullRequestRef,
 } from '../../shared/types';
@@ -9,13 +10,10 @@ import {
   isNativeViewedButton,
   SidebarRenderer,
 } from './dom';
-import { isViewed, updateFileViewedState } from './model';
+import { updateFileViewedState } from './model';
 
 export class PrSidebarController {
   private readonly renderer: SidebarRenderer;
-  private readonly confirmedViewed = new Map<string, boolean>();
-  private readonly desiredViewed = new Map<string, boolean>();
-  private readonly runningMutations = new Set<string>();
   private observer: MutationObserver | null = null;
   private snapshot: PullRequestFilesSnapshot | null = null;
   private status: PageStatus = { state: 'idle' };
@@ -24,11 +22,11 @@ export class PrSidebarController {
   private renderQueued = false;
   private reconcileTimer: number | undefined;
 
-  constructor(readonly ref: PullRequestRef) {
+  constructor(
+    readonly ref: PullRequestRef,
+    readonly selection: PullRequestChangeSelection = { kind: 'all' },
+  ) {
     this.renderer = new SidebarRenderer({
-      onViewedChange: (path, viewed) => {
-        this.setViewed(path, viewed);
-      },
       onRetry: () => {
         void this.retry();
       },
@@ -52,7 +50,11 @@ export class PrSidebarController {
     this.renderCurrent();
 
     const cachedPromise = sendBackgroundMessage<PullRequestFilesSnapshot | null>(
-      { type: 'cache:get', ref: this.ref },
+      {
+        type: 'cache:get',
+        ref: this.ref,
+        selection: this.selection,
+      },
     );
     const freshPromise = this.loadFresh();
 
@@ -98,6 +100,7 @@ export class PrSidebarController {
         await sendBackgroundMessage<PullRequestFilesSnapshot>({
           type: 'pull:load',
           ref: this.ref,
+          selection: this.selection,
         });
       if (this.stopped || generation !== this.loadGeneration) {
         return;
@@ -115,90 +118,14 @@ export class PrSidebarController {
   }
 
   private applySnapshot(snapshot: PullRequestFilesSnapshot): void {
-    let next = snapshot;
-    for (const path of this.runningMutations) {
-      const current = this.snapshot?.files.find((file) => file.path === path);
-      if (current) {
-        next = updateFileViewedState(next, path, isViewed(current.viewedState));
-      }
-    }
-    for (const [path, viewed] of this.desiredViewed) {
-      next = updateFileViewedState(next, path, viewed);
-    }
-
-    this.snapshot = next;
-    for (const file of snapshot.files) {
-      if (
-        !this.runningMutations.has(file.path) &&
-        !this.desiredViewed.has(file.path)
-      ) {
-        this.confirmedViewed.set(file.path, isViewed(file.viewedState));
-      }
-    }
+    this.snapshot = snapshot;
     this.status = {
       state: 'ready',
       ref: this.ref,
-      fileCount: next.files.length,
-      savedAt: next.savedAt,
+      fileCount: snapshot.files.length,
+      savedAt: snapshot.savedAt,
     };
     this.renderCurrent();
-  }
-
-  private setViewed(path: string, viewed: boolean): void {
-    if (!this.snapshot) {
-      return;
-    }
-
-    this.desiredViewed.set(path, viewed);
-    this.snapshot = updateFileViewedState(this.snapshot, path, viewed);
-    this.renderCurrent();
-    void this.drainViewedMutation(path);
-  }
-
-  private async drainViewedMutation(path: string): Promise<void> {
-    if (this.runningMutations.has(path) || !this.snapshot) {
-      return;
-    }
-
-    this.runningMutations.add(path);
-    try {
-      while (this.desiredViewed.has(path) && this.snapshot) {
-        const viewed = this.desiredViewed.get(path);
-        this.desiredViewed.delete(path);
-        if (viewed === undefined) {
-          continue;
-        }
-
-        try {
-          await sendBackgroundMessage<void>({
-            type: 'pull:set-viewed',
-            ref: this.ref,
-            pullRequestId: this.snapshot.pullRequestId,
-            path,
-            viewed,
-          });
-          this.confirmedViewed.set(path, viewed);
-        } catch (error) {
-          if (!this.desiredViewed.has(path) && this.snapshot) {
-            const confirmed = this.confirmedViewed.get(path) ?? !viewed;
-            this.snapshot = updateFileViewedState(
-              this.snapshot,
-              path,
-              confirmed,
-            );
-            this.renderCurrent();
-            this.renderer.showFileError(
-              path,
-              error instanceof Error
-                ? error.message
-                : 'Unable to update Viewed state.',
-            );
-          }
-        }
-      }
-    } finally {
-      this.runningMutations.delete(path);
-    }
   }
 
   private renderCurrent(): void {
@@ -286,7 +213,6 @@ export class PrSidebarController {
     }
 
     const viewed = button.getAttribute('aria-pressed') === 'true';
-    this.confirmedViewed.set(path, viewed);
     this.snapshot = updateFileViewedState(this.snapshot, path, viewed);
     this.renderCurrent();
   }

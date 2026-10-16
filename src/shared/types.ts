@@ -6,6 +6,11 @@ export interface PullRequestRef {
   number: number;
 }
 
+export type PullRequestChangeSelection =
+  | { kind: 'all' }
+  | { kind: 'commit'; oid: string }
+  | { kind: 'range'; startOid: string; endOid: string };
+
 export interface PullRequestFile {
   path: string;
   additions: number;
@@ -15,6 +20,7 @@ export interface PullRequestFile {
 
 export interface PullRequestFilesSnapshot {
   ref: PullRequestRef;
+  selection: PullRequestChangeSelection;
   pullRequestId: string;
   headOid: string;
   files: PullRequestFile[];
@@ -26,6 +32,13 @@ export type PageStatus =
   | { state: 'loading'; ref: PullRequestRef }
   | { state: 'ready'; ref: PullRequestRef; fileCount: number; savedAt: number }
   | { state: 'error'; ref?: PullRequestRef; message: string };
+
+export interface PinnedPerson {
+  id: string;
+  login: string;
+  name: string;
+  avatarUrl: string;
+}
 
 export interface HandbackContext {
   viewerLogin: string;
@@ -42,17 +55,25 @@ export type BackgroundRequest =
   | { type: 'auth:save'; token: string }
   | { type: 'auth:remove' }
   | { type: 'ui:open-popup' }
-  | { type: 'cache:get'; ref: PullRequestRef }
-  | { type: 'pull:load'; ref: PullRequestRef }
   | {
-      type: 'pull:set-viewed';
+      type: 'cache:get';
       ref: PullRequestRef;
-      pullRequestId: string;
-      path: string;
-      viewed: boolean;
+      selection: PullRequestChangeSelection;
+    }
+  | {
+      type: 'pull:load';
+      ref: PullRequestRef;
+      selection: PullRequestChangeSelection;
     }
   | { type: 'pull:handback-context'; ref: PullRequestRef }
-  | { type: 'pull:handback-assignee'; ref: PullRequestRef };
+  | { type: 'pull:handback-assignee'; ref: PullRequestRef }
+  | { type: 'pins:get'; owner: string; repository: string }
+  | {
+      type: 'pins:save';
+      owner: string;
+      repository: string;
+      people: PinnedPerson[];
+    };
 
 export interface BackgroundResponse<T = unknown> {
   ok: boolean;

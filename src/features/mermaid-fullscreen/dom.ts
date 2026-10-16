@@ -170,7 +170,9 @@ export function unmountOpenControl(embed: HTMLElement): void {
   findOpenButton(embed)?.remove();
 }
 
-export function parseRenderedSvg(markup: string): SVGSVGElement | null {
+export function readRenderedSvg(
+  markup: string,
+): { ok: true; svg: SVGSVGElement } | { ok: false; detail: string } {
   // Mermaid serializes HTML labels inside <foreignObject> using HTML void
   // elements such as <br>. Parsing that markup as XML rejects otherwise valid
   // browser-rendered diagrams, so parse it in an inert HTML document instead.
@@ -181,7 +183,12 @@ export function parseRenderedSvg(markup: string): SVGSVGElement | null {
     svg?.localName !== 'svg' ||
     !(svg instanceof SVGSVGElement)
   ) {
-    return null;
+    const count = parsed.body.childElementCount;
+    const name = svg?.localName ?? 'none';
+    return {
+      ok: false,
+      detail: `Expected a single <svg> element, received ${count} starting with <${name}>.`,
+    };
   }
 
   svg.querySelectorAll('script').forEach((element) => element.remove());
@@ -203,7 +210,12 @@ export function parseRenderedSvg(markup: string): SVGSVGElement | null {
   svg.removeAttribute('width');
   svg.removeAttribute('height');
   svg.style.maxWidth = 'none';
-  return svg;
+  return { ok: true, svg };
+}
+
+export function parseRenderedSvg(markup: string): SVGSVGElement | null {
+  const result = readRenderedSvg(markup);
+  return result.ok ? result.svg : null;
 }
 
 export function getSvgIntrinsicSize(svg: SVGSVGElement): {
@@ -250,6 +262,7 @@ export class MermaidModal {
   private thumbGrabOffset = 0;
   private active = true;
   private contentState: ModalContentState = 'loading';
+  private parseErrorDetail: string | null = null;
 
   constructor(handlers: MermaidModalHandlers) {
     this.handlers = handlers;
@@ -306,6 +319,10 @@ export class MermaidModal {
     return this.contentState;
   }
 
+  get parseError(): string | null {
+    return this.parseErrorDetail;
+  }
+
   showLoading(): void {
     this.contentState = 'loading';
     this.teardownViewport();
@@ -346,11 +363,14 @@ export class MermaidModal {
   }
 
   showSvg(svgMarkup: string): boolean {
-    const svg = parseRenderedSvg(svgMarkup);
-    if (!svg) {
+    const parsed = readRenderedSvg(svgMarkup);
+    if (!parsed.ok) {
+      this.parseErrorDetail = parsed.detail;
       this.showError();
       return false;
     }
+    const svg = parsed.svg;
+    this.parseErrorDetail = null;
 
     this.contentState = 'ready';
     this.status.hidden = true;

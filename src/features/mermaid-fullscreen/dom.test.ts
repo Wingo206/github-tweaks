@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { requestRenderedSvg } from './bridge';
+import { MERMAID_ERROR_LOG_KEY, readMermaidViewerErrors } from './errors';
 import {
   MODAL_ATTRIBUTE,
   MermaidModal,
@@ -50,6 +51,7 @@ afterEach(() => {
   document.body.innerHTML = '';
   document.documentElement.className = '';
   clearWiredMarkers();
+  localStorage.clear();
 });
 
 describe('mermaid DOM helpers', () => {
@@ -251,7 +253,10 @@ describe('MermaidModal', () => {
 describe('MermaidFullscreenController', () => {
   it('opens the owned modal with the GitHub SVG and cleans up on close', async () => {
     document.body.innerHTML = fixture;
-    vi.mocked(requestRenderedSvg).mockResolvedValue(svgFixture);
+    vi.mocked(requestRenderedSvg).mockResolvedValue({
+      ok: true,
+      svg: svgFixture,
+    });
     const controller = new MermaidFullscreenController();
     controller.start();
 
@@ -284,8 +289,12 @@ describe('MermaidFullscreenController', () => {
   it('retries after an SVG failure and can fall back to the native control', async () => {
     document.body.innerHTML = fixture;
     vi.mocked(requestRenderedSvg)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(svgFixture);
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: 'empty-svg',
+        detail: 'Viewscreen returned no SVG.',
+      })
+      .mockResolvedValueOnce({ ok: true, svg: svgFixture });
 
     const controller = new MermaidFullscreenController();
     controller.start();
@@ -296,6 +305,12 @@ describe('MermaidFullscreenController', () => {
     await vi.waitFor(() => {
       expect(document.body.textContent).toContain('Could not load the diagram');
     });
+    expect(readMermaidViewerErrors()).toMatchObject([
+      {
+        reason: 'empty-svg',
+        detail: 'Viewscreen returned no SVG.',
+      },
+    ]);
 
     document
       .querySelectorAll<HTMLButtonElement>(
@@ -307,7 +322,11 @@ describe('MermaidFullscreenController', () => {
       expect(document.querySelector(`.${VIEWPORT_CLASS} svg`)).toBeTruthy();
     });
 
-    vi.mocked(requestRenderedSvg).mockResolvedValue(null);
+    vi.mocked(requestRenderedSvg).mockResolvedValue({
+      ok: false,
+      reason: 'request-timeout',
+      detail: 'No SVG response within 2500ms.',
+    });
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
     );
@@ -327,6 +346,29 @@ describe('MermaidFullscreenController', () => {
     expect(findOpenButton(embed)).toBeNull();
     expect(findNativeDetails(embed)?.hidden).toBe(false);
     expect(document.querySelector(`[${MODAL_ATTRIBUTE}]`)).toBeNull();
+
+    controller.stop();
+  });
+
+  it('logs a rejected SVG payload', async () => {
+    document.body.innerHTML = fixture;
+    vi.mocked(requestRenderedSvg).mockResolvedValue({
+      ok: true,
+      svg: '<p>not a diagram</p>',
+    });
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    findOpenButton(findMermaidEmbeds()[0]!)!.click();
+
+    await vi.waitFor(() => {
+      expect(document.body.textContent).toContain('Could not load the diagram');
+    });
+    expect(readMermaidViewerErrors()[0]).toMatchObject({
+      reason: 'invalid-svg',
+      detail: 'Expected a single <svg> element, received 1 starting with <p>.',
+    });
+    expect(localStorage.getItem(MERMAID_ERROR_LOG_KEY)).toBeTruthy();
 
     controller.stop();
   });

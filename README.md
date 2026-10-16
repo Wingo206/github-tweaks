@@ -12,10 +12,11 @@ patch.
 On a pull request's changed-files page, GitHub Tweaks adds:
 
 - per-file additions and deletions (`+X -Y`) to the file tree
-- a Viewed checkbox synchronized with GitHub's native Viewed control
+- a read-only Viewed indicator synchronized with GitHub's native control
 - dimmed file rows after they are marked Viewed, including completed folders
 - remaining unviewed line counts and `viewed/total` progress on directory rows
 - `X / N changes` line progress with a circular meter beside the sticky file viewed control
+- commit- and commit-range-specific counts when the Changes selector is filtered
 - immediate cached results followed by a fresh GitHub API update
 
 The feature supports GitHub's `/pull/:number/changes` and legacy
@@ -29,7 +30,9 @@ viewer clones GitHub's complete rendered SVG from its
 `viewscreen.githubusercontent.com` frame, then adds free mouse pan (left or
 middle drag), wheel zoom toward the cursor, and custom scrollbars when zoomed
 in. Close with Esc, the close button, or the backdrop. If the SVG cannot be
-loaded, the modal offers Retry or Show native viewer for that diagram.
+loaded, the modal offers Retry or Show native viewer for that diagram. The
+failure is also printed in the page console and appended to
+`localStorage['ght-mermaid-fullscreen-errors']`.
 
 ### Hand back PR assignee
 
@@ -38,6 +41,15 @@ Tweaks adds a **reassign author** action beside Assignees (same style as
 Refined GitHub’s “review now” / “approve now”). One click removes you as an
 assignee (leaving other assignees alone), assigns the author if needed, then
 refreshes GitHub's Assignees partial so the list shows GitHub's values.
+
+### Pinned people
+
+On pull request pages, each person in the Reviewers and Assignees menus has a
+pin. Pins are stored per repository in extension storage and listed
+alphabetically under **Pinned** at the top of both menus, including people who
+are not in that menu yet. The row still selects them through GitHub's own
+control. The menu's search box filters the pinned rows along with the rest of
+the list. Pins are for people.
 
 ## Install for local use
 
@@ -59,8 +71,9 @@ Then:
 6. Save a fine-grained GitHub personal access token.
 
 The token must target the resource owner containing the repositories you use
-and grant **Pull requests: read and write**. Version 1 supports one token and
-one resource owner at a time.
+and grant **Pull requests: read and write** plus **Contents: read**. The
+Contents permission supplies per-commit and commit-range statistics. Version 1
+supports one token and one resource owner at a time.
 
 ## Privacy and permissions
 
@@ -72,9 +85,10 @@ never exposed to GitHub page scripts or the content script.
 The extension requests access only to:
 
 - `https://github.com/*` to enhance pull request pages and Mermaid embeds
-- `https://api.github.com/*` to read changed-file metadata, update Viewed
-  state, and hand back PR assignees
-- extension-local storage for the token and pull request metadata cache
+- `https://api.github.com/*` to read changed-file metadata and hand back PR
+  assignees
+- extension-local storage for the token, pull request metadata cache, and
+  per-repository pinned people
 
 ## Development
 

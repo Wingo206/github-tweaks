@@ -1,4 +1,5 @@
 import { requestRenderedSvg } from './bridge';
+import { logMermaidViewerFailure } from './errors';
 import {
   MermaidModal,
   clearWiredMarkers,
@@ -128,7 +129,7 @@ export class MermaidFullscreenController {
     const generation = ++this.loadGeneration;
     modal.showLoading();
 
-    const svgMarkup = await requestRenderedSvg(embed);
+    const result = await requestRenderedSvg(embed);
     if (
       this.stopped ||
       generation !== this.loadGeneration ||
@@ -138,8 +139,20 @@ export class MermaidFullscreenController {
       return;
     }
 
-    if (!svgMarkup || !modal.showSvg(svgMarkup)) {
+    if (!result.ok) {
+      logMermaidViewerFailure({
+        reason: result.reason,
+        detail: result.detail,
+      });
       modal.showError();
+      return;
+    }
+
+    if (!modal.showSvg(result.svg)) {
+      logMermaidViewerFailure({
+        reason: 'invalid-svg',
+        detail: modal.parseError ?? 'Rendered SVG could not be parsed.',
+      });
     }
   }
 
