@@ -49,8 +49,10 @@ export class SidebarRenderer {
         if (aggregate.total > 0) {
           this.renderFolderRow(row, aggregate);
         } else {
-          row.classList.remove(VIEWED_ROW_CLASS);
+          this.clearRowMetadata(row);
         }
+      } else {
+        this.clearRowMetadata(row);
       }
     }
 
@@ -73,6 +75,15 @@ export class SidebarRenderer {
     document
       .querySelectorAll(`.${VIEWED_ROW_CLASS}`)
       .forEach((element) => element.classList.remove(VIEWED_ROW_CLASS));
+  }
+
+  private clearRowMetadata(row: HTMLElement): void {
+    row.classList.remove(VIEWED_ROW_CLASS);
+    const container = findContentContainer(row);
+    if (!container) {
+      return;
+    }
+    findDirectMetadata(container)?.remove();
   }
 
   private renderToolbarLineProgress(
