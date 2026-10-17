@@ -1,0 +1,44 @@
+{
+  "name": "github-tweaks-companion",
+  "displayName": "GitHub Tweaks Companion",
+  "description": "Opens files from GitHub Tweaks in the right local Cursor window.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "githubTweaksCompanion.copyPairingToken",
+        "title": "GitHub Tweaks: Copy pairing token"
+      },
+      {
+        "command": "githubTweaksCompanion.showStatus",
+        "title": "GitHub Tweaks: Show companion status"
+      }
+    ],
+    "configuration": {
+      "title": "GitHub Tweaks Companion",
+      "properties": {
+        "githubTweaksCompanion.port": {
+          "type": "number",
+          "default": 17380,
+          "description": "Local HTTP port the browser extension uses to reach the companion server."
+        }
+      }
+    }
+  }
+}

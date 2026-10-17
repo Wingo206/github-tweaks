@@ -9,7 +9,11 @@ const browserMock = {
   },
   storage: {
     local: {
-      get: vi.fn(async (key: string) => ({ [key]: storage.get(key) })),
+      get: vi.fn(async (keys: string | string[]) =>
+        Object.fromEntries(
+          (Array.isArray(keys) ? keys : [keys]).map((key) => [key, storage.get(key)]),
+        ),
+      ),
       set: vi.fn(async (values: Record<string, unknown>) => {
         for (const [key, value] of Object.entries(values)) {
           storage.set(key, value);

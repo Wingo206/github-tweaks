@@ -1,3 +1,7 @@
+import type { Ref } from '../../companion/src/protocol';
+
+export type { Ref };
+
 export type ViewedState = 'VIEWED' | 'UNVIEWED' | 'DISMISSED';
 
 export interface PullRequestRef {
@@ -51,7 +55,58 @@ export interface HandbackContext {
   assigneeIdsByLogin: Record<string, string>;
 }
 
+export type OpenTarget =
+  | {
+      kind: 'pr-line';
+      owner: string;
+      repository: string;
+      number: number;
+      path: string;
+      line: number;
+    }
+  | {
+      kind: 'pr-comment';
+      owner: string;
+      repository: string;
+      number: number;
+      commentId: string;
+      fallback: { path: string; line: number } | null;
+    }
+  | {
+      kind: 'blob';
+      owner: string;
+      repository: string;
+      ref: Ref | null;
+      path: string;
+      line: number;
+    };
+
+export type OpenFailureReason =
+  | 'not-paired'
+  | 'companion-offline'
+  | 'no-clone'
+  | 'comment-not-found'
+  | 'open-failed'
+  | 'timeout';
+
+export type OpenResult =
+  | { status: 'opened' }
+  | { status: 'failed'; reason: OpenFailureReason; message: string };
+
+export type CompanionStatus =
+  | { connected: true; version: string; windows: number }
+  | { connected: false; reason: 'not-paired' | 'offline' | 'unauthorized' };
+
+export interface CompanionSettingsView {
+  port: number;
+  paired: boolean;
+}
+
 export type BackgroundRequest =
+  | { type: 'open-in-cursor'; target: OpenTarget }
+  | { type: 'companion-status' }
+  | { type: 'companion:get-settings' }
+  | { type: 'companion:save-settings'; port?: number; token?: string }
   | { type: 'auth:get' }
   | { type: 'auth:save'; token: string }
   | { type: 'auth:remove' }

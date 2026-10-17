@@ -45,6 +45,34 @@
         <p id="auth-status" class="status" role="status"></p>
       </section>
 
+      <section aria-labelledby="companion-heading">
+        <h2 id="companion-heading">Cursor companion</h2>
+        <p class="hint">
+          Used by Open in Cursor. In Cursor, run
+          <strong>GitHub Tweaks: Copy pairing token</strong> and paste it here.
+        </p>
+        <div class="companion-grid">
+          <label for="companion-port">Port</label>
+          <input
+            id="companion-port"
+            name="companion-port"
+            type="number"
+            min="1"
+            max="65535"
+            inputmode="numeric"
+          >
+          <label for="companion-token">Pairing token</label>
+          <input
+            id="companion-token"
+            name="companion-token"
+            type="password"
+            autocomplete="off"
+            placeholder="Paste pairing token"
+          >
+        </div>
+        <p id="companion-status" class="status" role="status">Checking…</p>
+      </section>
+
       <section aria-labelledby="features-heading">
         <h2 id="features-heading">Features</h2>
         <ul id="feature-list" class="feature-list"></ul>

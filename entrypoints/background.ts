@@ -13,16 +13,24 @@ import {
   loadHandbackContext,
 } from '../src/github/pullRequestAssignees';
 import { loadPullRequestFiles } from '../src/github/pullRequestFiles';
+import { loadPullRequestContext } from '../src/github/pullRequestContext';
+import {
+  getCompanionSettingsView,
+  getCompanionStatus,
+  openInCursor,
+  saveCompanionSettings,
+} from '../src/companion/client';
+import { resolveOpenTarget } from '../src/companion/resolveTarget';
 import type { BackgroundRequest, BackgroundResponse } from '../src/shared/types';
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
     (
       request: BackgroundRequest,
-      _sender,
+      sender: Browser.runtime.MessageSender,
       sendResponse: (response: BackgroundResponse) => void,
     ) => {
-      void handleRequest(request)
+      void handleRequest(request, sender)
         .then((data) => sendResponse({ ok: true, data }))
         .catch((error: unknown) =>
           sendResponse({
@@ -39,8 +47,50 @@ export default defineBackground(() => {
   );
 });
 
-async function handleRequest(request: BackgroundRequest): Promise<unknown> {
+async function handleRequest(
+  request: BackgroundRequest,
+  sender: Browser.runtime.MessageSender,
+): Promise<unknown> {
   switch (request.type) {
+    case 'open-in-cursor': {
+      const resolution = await resolveOpenTarget(request.target, async (ref) => {
+        const token = await getToken();
+        if (!token) {
+          return null;
+        }
+        try {
+          return await loadPullRequestContext(token, ref);
+        } catch (error) {
+          console.warn('[ght-open-in-cursor] PR context failed', error);
+          return null;
+        }
+      });
+      if (!resolution.ok) {
+        return resolution.result;
+      }
+      const tabId = sender.tab?.id;
+      return openInCursor(resolution.request, {
+        openUrl: async (url) => {
+          if (tabId !== undefined) {
+            await browser.tabs.update(tabId, { url });
+          }
+        },
+      });
+    }
+    case 'companion-status':
+      return getCompanionStatus();
+    case 'companion:get-settings':
+      return getCompanionSettingsView();
+    case 'companion:save-settings': {
+      const update: { port?: number; token?: string } = {};
+      if (request.port !== undefined) {
+        update.port = request.port;
+      }
+      if (request.token !== undefined) {
+        update.token = request.token;
+      }
+      return saveCompanionSettings(update);
+    }
     case 'auth:get': {
       const token = await getToken();
       return { configured: token !== null };

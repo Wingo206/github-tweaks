@@ -1,0 +1,49 @@
+<div class="TimelineItem-body my-0">
+  <turbo-frame id="review-thread-or-comment-id-3001" target="_top">
+    <review-thread-collapsible class="review-thread-component js-comment-container js-resolvable-timeline-thread-container border rounded-2 d-block" data-hidden-comment-ids="">
+      <div class="d-flex flex-items-center p-2 rounded-top-2 bgColor-muted js-toggle-outdated-comments">
+        <button data-target="review-thread-collapsible.button" data-action="click:review-thread-collapsible#toggle" aria-expanded="true" type="button" class="Button Button--iconOnly Button--invisible Button--small flex-shrink-0 mr-2 review-thread-chevron"></button>
+        <span class="flex-auto d-flex flex-items-center">
+          <a href="/acme/widgets/pull/42/files#diff-0000000000000000000000000000000000000000000000000000000000000001" class="text-mono text-small Link--primary wb-break-all mr-2">...widgets/panel.ts</a>
+        </span>
+      </div>
+      <div data-target="review-thread-collapsible.body">
+        <div class="blob-wrapper border-bottom">
+          <table class="diff-table tab-size js-diff-table">
+            <tbody>
+              <tr>
+                <td data-line-number="12" class="blob-num blob-num-context"></td>
+                <td data-line-number="12" class="blob-num blob-num-context"></td>
+                <td class="blob-code blob-code-context"><span class="blob-code-inner">context</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="js-inline-comments-container">
+          <div class="js-comments-holder">
+            <div id="discussion_r4001" class="timeline-comment-group js-minimizable-comment-group js-targetable-element review-comment">
+              <div class="comment-body markdown-body"><p dir="auto">first comment</p></div>
+            </div>
+            <div id="discussion_r4002" class="timeline-comment-group js-minimizable-comment-group js-targetable-element review-comment">
+              <div class="comment-body markdown-body"><p dir="auto">reply</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </review-thread-collapsible>
+  </turbo-frame>
+
+  <turbo-frame id="review-thread-or-comment-id-3002" target="_top">
+    <review-thread-collapsible class="review-thread-component js-comment-container js-resolvable-timeline-thread-container border rounded-2 d-block" data-resolved="true" data-hidden-comment-ids="5001,5002,5003">
+      <div class="d-flex flex-items-center p-2 rounded-top-2 bgColor-muted js-toggle-outdated-comments">
+        <button data-target="review-thread-collapsible.button" data-action="click:review-thread-collapsible#toggle" aria-expanded="false" type="button" class="Button Button--iconOnly Button--invisible Button--small flex-shrink-0 mr-2 review-thread-chevron"></button>
+        <span class="flex-auto d-flex flex-items-center">
+          <a href="/acme/widgets/pull/42/files#diff-0000000000000000000000000000000000000000000000000000000000000002" class="text-mono text-small Link--primary wb-break-all mr-2">...widgets/other.ts</a>
+          <span title="Label: Outdated" class="Label Label--secondary">Outdated</span>
+        </span>
+        <button data-action="click:review-thread-collapsible#toggle" type="button" class="review-thread-show-text Button--link Button--medium Button color-fg-muted f6"><span class="Button-label">Show resolved</span></button>
+      </div>
+      <div data-target="review-thread-collapsible.body" hidden=""></div>
+    </review-thread-collapsible>
+  </turbo-frame>
+</div>

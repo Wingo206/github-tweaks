@@ -1,6 +1,7 @@
 import { getFeatureFlags } from '../src/features/flags';
 import { FeatureRunner } from '../src/features/runner';
 import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
+import { OpenInCursorFeature } from '../src/features/open-in-cursor';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
@@ -22,6 +23,7 @@ export default defineContentScript({
       'mermaid-fullscreen': new MermaidFullscreenFeature(),
       'pr-handback-assignee': new PrHandbackAssigneeFeature(),
       'pr-people-pins': new PrPeoplePinsFeature(),
+      'open-in-cursor': new OpenInCursorFeature(),
     };
     const runner = new FeatureRunner(
       FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),

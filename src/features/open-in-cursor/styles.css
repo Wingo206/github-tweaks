@@ -1,0 +1,54 @@
+.ght-oic-button {
+  flex-shrink: 0;
+}
+
+.ght-oic-button[data-ght-oic-state="opened"] {
+  color: var(--fgColor-success, #1a7f37);
+}
+
+.ght-oic-button[data-ght-oic-state="failed"] {
+  color: var(--fgColor-danger, #d1242f);
+}
+
+.ght-oic-spinner {
+  animation: ght-oic-spin 0.8s linear infinite;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-right-color: transparent;
+  display: inline-block;
+  height: 14px;
+  width: 14px;
+}
+
+@keyframes ght-oic-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ght-oic-message {
+  color: var(--fgColor-danger, #d1242f);
+  font-size: 12px;
+  margin: 0 4px;
+  max-width: 280px;
+  white-space: normal;
+}
+
+.ght-oic-toast {
+  background: var(--bgColor-emphasis, #25292e);
+  border-radius: 6px;
+  bottom: 24px;
+  box-shadow: var(--shadow-floating-large, 0 8px 24px rgba(0, 0, 0, 0.2));
+  color: var(--fgColor-onEmphasis, #fff);
+  font-size: 13px;
+  left: 50%;
+  max-width: 420px;
+  padding: 8px 12px;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.ght-oic-toast[data-ght-oic-state="failed"] {
+  background: var(--bgColor-danger-emphasis, #cf222e);
+}

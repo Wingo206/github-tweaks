@@ -28,6 +28,8 @@ pnpm test         # Vitest unit and DOM fixture tests
 pnpm test:watch   # Vitest watch mode
 pnpm test:e2e     # build and run the mocked Chromium extension flow
 pnpm check        # all checks and a final production build
+pnpm companion:build    # bundle the Cursor companion to companion/out/
+pnpm companion:install  # build, package a .vsix, and install it into Cursor
 ```
 
 The unpacked production extension is written to `.output/chrome-mv3`.
@@ -58,7 +60,9 @@ src/
     flags.ts                persisted on/off toggles (read at page load)
     <feature-id>/           model, DOM, controller, styles.css, tests
   github/                   GraphQL, pull request API, cache, and unit tests
+  companion/                background-worker client for the Cursor companion
   shared/                   message and domain types
+companion/                  Cursor extension and local server (see below)
 tests/
   setup.ts                  shared Vitest browser and DOM setup
   fixtures/                 minimal sanitized GitHub DOM captures
@@ -124,6 +128,39 @@ Content and popup code call `sendBackgroundMessage`; the background entrypoint
 validates the request, owns side effects, and returns a success/error envelope.
 Add request and response types before adding a handler.
 
+### Cursor companion
+
+Open in Cursor has three parts. The design is in
+[`docs/plans/open-in-cursor.md`](docs/plans/open-in-cursor.md).
+
+```text
+companion/
+  package.json          Cursor extension manifest (not a pnpm workspace package)
+  src/protocol.ts       HTTP and window-socket message types (shared with the browser)
+  src/extension/        runs in every WSL window: git state, focus, opening files
+  src/server/           one Node process: window registry, ranking, launches,
+                        PowerShell focus helper, browser HTTP API
+  scripts/              esbuild bundle and .vsix install
+```
+
+- The browser background worker resolves what was clicked into
+  `repo/path/line/ref` and calls `POST /open` on `127.0.0.1:<port>` with the
+  pairing token.
+- The server ranks connected windows (repo, then branch, then file exists, then
+  most recent focus), tells the chosen window to open the file over a Unix
+  socket, and raises it with `SetForegroundWindow` through a long-lived
+  `powershell.exe` helper.
+- The Cursor extension spawns the server when no socket answers. The server
+  exits 10 minutes after the last window disconnects, and restarts when a newer
+  extension version connects.
+
+Server state lives in `~/.config/github-tweaks-companion/` (`token`,
+`clones.json`, `server.log`). After changing companion code, run
+`pnpm companion:install` and reload each Cursor window; the first reloaded
+window restarts the server with the new version. **GitHub Tweaks: Show
+companion status** prints the server version, window count, and this window's
+folders, branches, and remotes.
+
 ### DOM integration rules
 
 GitHub's current pull request UI is React-based and many classes contain build
@@ -149,7 +186,24 @@ Viewed synchronization, and rendering against sanitized markup.
 
 The Playwright test builds and loads the real unpacked extension. It fulfills a
 GitHub fixture page and GraphQL calls locally, then verifies metadata rendering
-and a Viewed mutation without requiring credentials.
+and a Viewed mutation without requiring credentials. The Open in Cursor flow
+runs against a fake companion HTTP server.
+
+Companion tests run in Vitest's Node environment (`companion/**/*.test.ts`).
+The server integration test bundles the server, spawns it on a temporary socket
+and port with fake windows, and stubs the focus helper with `--no-focus`.
+
+### Manual Open in Cursor checklist
+
+- three clones of one repository on different branches, with the PR head
+  branch checked out in one: the button opens that clone
+- click while another Cursor window is focused; the target comes to the front
+- target window minimized
+- repository not open in any window (the clone launches, then the file opens)
+- no Cursor running (the browser uses its cached launch URL)
+- wrong pairing token (popup shows "Token rejected")
+- server killed mid-session (windows respawn it)
+- companion update while windows are open
 
 Install the browser once if needed:
 

@@ -2,7 +2,8 @@ export type FeatureId =
   | 'pr-sidebar-metadata'
   | 'mermaid-fullscreen'
   | 'pr-handback-assignee'
-  | 'pr-people-pins';
+  | 'pr-people-pins'
+  | 'open-in-cursor';
 
 export interface FeatureDefinition {
   id: FeatureId;
@@ -36,6 +37,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'pr-people-pins',
     title: 'Pinned people',
     description: 'Per-repository pins in the Reviewers and Assignees menus.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'open-in-cursor',
+    title: 'Open in Cursor',
+    description: 'Open PR lines, review comments, and files in the matching local Cursor window.',
     defaultEnabled: true,
   },
 ];

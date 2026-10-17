@@ -55,6 +55,32 @@ are not in that menu yet. The row still selects them through GitHub's own
 control. The menu's search box filters the pinned rows along with the rest of
 the list. Pins are for people.
 
+### Open in Cursor
+
+Opens the file and line behind a GitHub view in your local Cursor window,
+inside the matching clone, and brings that window to the front. Buttons appear:
+
+- in each diff line's **More actions** menu and in each file header (before
+  **Viewed**) on the Files changed tab
+- in each review thread heading on the Files changed and Conversation tabs
+- in a file page's toolbar (after Raw / Copy / Download) and its highlighted
+  line menu
+
+When a repository is cloned more than once, the clone checked out on the PR's
+head branch wins; otherwise the most recently focused window wins. If the
+clone isn't open, Cursor opens it and then the file.
+
+This needs the **GitHub Tweaks Companion** Cursor extension, which runs in
+every WSL Cursor window and starts a small local server on demand:
+
+```sh
+pnpm companion:install
+```
+
+Reload each Cursor window, run **GitHub Tweaks: Copy pairing token** from the
+command palette, and paste the token into the **Cursor companion** section of
+the toolbar popup. The current version supports WSL Cursor windows on Windows.
+
 ## Install for local use
 
 Requirements: Node.js 20 or newer, pnpm, Chrome, and a GitHub fine-grained
@@ -91,8 +117,13 @@ The extension requests access only to:
 - `https://github.com/*` to enhance pull request pages and Mermaid embeds
 - `https://api.github.com/*` to read changed-file metadata and hand back PR
   assignees
-- extension-local storage for the token, pull request metadata cache, and
-  per-repository pinned people
+- `http://127.0.0.1/*` to reach the local Cursor companion server (any port)
+- extension-local storage for the token, pull request metadata cache,
+  per-repository pinned people, and the companion pairing token
+
+The companion server listens only on `127.0.0.1`. It rejects requests without
+the pairing token or from a web page origin, and it never receives the GitHub
+token.
 
 ## Development
 

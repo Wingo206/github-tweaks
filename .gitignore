@@ -146,6 +146,10 @@ vite.config.ts.timestamp-*
 .wxt/
 .output/
 
+# Companion build output
+companion/out/
+*.vsix
+
 # DOM Dump Picker captures
 devtools/dom-picker/dumps/
 

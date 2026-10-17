@@ -9,6 +9,7 @@ export default defineConfig({
       'https://github.com/*',
       'https://api.github.com/*',
       'https://viewscreen.githubusercontent.com/*',
+      'http://127.0.0.1/*',
     ],
     action: {
       default_title: 'GitHub Tweaks',

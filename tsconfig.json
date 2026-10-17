@@ -5,5 +5,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true
-  }
+  },
+  "exclude": ["node_modules", ".output", "companion"]
 }

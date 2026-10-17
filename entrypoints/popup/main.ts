@@ -2,6 +2,8 @@ import { getFeatureFlags, setFeatureEnabled } from '../../src/features/flags';
 import { FEATURES, type FeatureFlags, type FeatureId } from '../../src/features/registry';
 import { sendBackgroundMessage } from '../../src/shared/messaging';
 import type {
+  CompanionSettingsView,
+  CompanionStatus,
   ContentRequest,
   PageStatus,
 } from '../../src/shared/types';
@@ -16,8 +18,19 @@ const retryPageButton = getElement<HTMLButtonElement>('retry-page');
 const authStatus = getElement<HTMLElement>('auth-status');
 const pageStatus = getElement<HTMLElement>('page-status');
 const errorMessage = getElement<HTMLElement>('error');
+const companionPortInput = getElement<HTMLInputElement>('companion-port');
+const companionTokenInput = getElement<HTMLInputElement>('companion-token');
+const companionStatus = getElement<HTMLElement>('companion-status');
 
 void initialize();
+
+companionPortInput.addEventListener('change', () => {
+  void saveCompanionSettings({ port: Number(companionPortInput.value) });
+});
+
+companionTokenInput.addEventListener('change', () => {
+  void saveCompanionSettings({ token: companionTokenInput.value });
+});
 
 tokenForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -51,7 +64,78 @@ async function initialize(): Promise<void> {
   } catch (error) {
     showError(error);
   }
-  await refreshPageStatus(false);
+  try {
+    renderCompanionSettings(
+      await sendBackgroundMessage<CompanionSettingsView>({ type: 'companion:get-settings' }),
+    );
+  } catch (error) {
+    showError(error);
+  }
+  await Promise.all([refreshPageStatus(false), refreshCompanionStatus()]);
+}
+
+async function saveCompanionSettings(update: {
+  port?: number;
+  token?: string;
+}): Promise<void> {
+  clearError();
+  try {
+    renderCompanionSettings(
+      await sendBackgroundMessage<CompanionSettingsView>({
+        type: 'companion:save-settings',
+        ...update,
+      }),
+    );
+  } catch (error) {
+    showError(error);
+  }
+  await refreshCompanionStatus();
+}
+
+function renderCompanionSettings(settings: CompanionSettingsView): void {
+  companionPortInput.value = String(settings.port);
+  companionTokenInput.value = '';
+  companionTokenInput.placeholder = settings.paired
+    ? 'Saved. Paste a new token to replace it.'
+    : 'Paste pairing token';
+}
+
+async function refreshCompanionStatus(): Promise<void> {
+  companionStatus.textContent = 'Checking…';
+  companionStatus.dataset.state = 'muted';
+  try {
+    renderCompanionStatus(
+      await sendBackgroundMessage<CompanionStatus>({ type: 'companion-status' }),
+    );
+  } catch (error) {
+    companionStatus.textContent =
+      error instanceof Error ? error.message : 'Couldn’t check the companion.';
+    companionStatus.dataset.state = 'error';
+  }
+}
+
+function renderCompanionStatus(status: CompanionStatus): void {
+  if (status.connected) {
+    const windows = `${status.windows} ${status.windows === 1 ? 'window' : 'windows'}`;
+    companionStatus.textContent = `Connected · v${status.version} · ${windows}`;
+    companionStatus.dataset.state = 'success';
+    return;
+  }
+  switch (status.reason) {
+    case 'not-paired':
+      companionStatus.textContent =
+        'Not paired: run GitHub Tweaks: Copy pairing token in Cursor';
+      companionStatus.dataset.state = 'muted';
+      break;
+    case 'offline':
+      companionStatus.textContent = 'Companion offline: open a Cursor window';
+      companionStatus.dataset.state = 'muted';
+      break;
+    case 'unauthorized':
+      companionStatus.textContent = 'Token rejected';
+      companionStatus.dataset.state = 'error';
+      break;
+  }
 }
 
 async function saveToken(): Promise<void> {

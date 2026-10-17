@@ -100,6 +100,17 @@ a,
   text-decoration: underline;
 }
 
+.companion-grid {
+  align-items: center;
+  display: grid;
+  gap: 6px 8px;
+  grid-template-columns: auto 1fr;
+}
+
+.companion-grid label {
+  margin: 0;
+}
+
 .feature-list {
   display: grid;
   gap: 8px;
