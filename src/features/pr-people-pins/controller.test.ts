@@ -45,7 +45,9 @@ describe('people pins controller', () => {
       'ada',
       'ben',
     ]);
-    expect(nativeInput('ben')?.checked).toBe(false);
+    const benInputs = document.querySelectorAll('#reviewers-select-menu input[value="22"]');
+    expect(benInputs).toHaveLength(1);
+    expect((benInputs[0] as HTMLInputElement).checked).toBe(false);
 
     const filter = document.querySelector<HTMLInputElement>('#review-filter-field')!;
     filter.value = 'zzz';
@@ -75,15 +77,6 @@ function pinnedLogins(menu: ParentNode): string[] {
     menu.querySelectorAll('[data-ght-pinned-row] .js-username'),
     (node) => node.textContent ?? '',
   );
-}
-
-function nativeInput(login: string): HTMLInputElement | null {
-  const label = Array.from(document.querySelectorAll<HTMLElement>('label.select-menu-item')).find(
-    (row) =>
-      !row.hasAttribute('data-ght-pinned-row') &&
-      row.querySelector('.js-username')?.textContent === login,
-  );
-  return label?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
 }
 
 async function settle(): Promise<void> {

@@ -14,9 +14,18 @@ export function syncPeoplePins(
 }
 
 export function clearPeoplePins(root: ParentNode = document): void {
-  for (const label of root.querySelectorAll<HTMLElement>('[data-ght-pin-hidden]')) {
-    label.removeAttribute('hidden');
-    label.removeAttribute('data-ght-pin-hidden');
+  if (root instanceof HTMLElement) {
+    restoreDuplicateCheckboxes(root);
+  } else {
+    for (const menu of findPeopleMenus(root)) {
+      restoreDuplicateCheckboxes(menu);
+    }
+  }
+  for (const label of root.querySelectorAll<HTMLElement>('[data-ght-pinned-row]')) {
+    const filterable = label
+      .closest('.select-menu-list')
+      ?.querySelector<HTMLElement>('[data-filterable-for]');
+    releaseLabel(label, filterable ?? null);
   }
   root.querySelectorAll('[data-ght-pins]').forEach((node) => node.remove());
   root.querySelectorAll('[data-ght-pin-button]').forEach((node) => node.remove());
@@ -64,103 +73,210 @@ function findPeopleMenus(root: ParentNode): HTMLElement[] {
 }
 
 function syncMenu(menu: HTMLElement, pins: readonly PinnedPerson[]): void {
-  restoreSuppressed(menu);
-  menu.querySelector('[data-ght-pins]')?.remove();
-
-  const natives = nativePersonLabels(menu);
-  const pinnedIds = new Set(pins.map((person) => person.id));
-  for (const label of natives) {
-    const person = readPerson(label);
-    if (!person) {
-      continue;
-    }
-    ensurePinButton(label, person, pinnedIds.has(person.id));
-  }
-
-  for (const label of natives) {
-    const person = readPerson(label);
-    if (person && pinnedIds.has(person.id)) {
-      suppressNative(label);
-    }
-  }
-
   const list = menu.querySelector('.select-menu-list');
   const checkboxName = userCheckboxName(menu);
   if (!list || !checkboxName) {
     return;
   }
 
-  const query = menu.querySelector<HTMLInputElement>('input.js-filterable-field')?.value ?? '';
-  const showing = visiblePins(pins, query);
-  if (showing.length === 0) {
+  const filterable = list.querySelector<HTMLElement>('[data-filterable-for]');
+  restoreDuplicateCheckboxes(menu);
+  const pinnedIds = new Set(pins.map((person) => person.id));
+  const query =
+    menu.querySelector<HTMLInputElement>('input.js-filterable-field')?.value ?? '';
+  const showing = new Set(visiblePins(pins, query).map((person) => person.id));
+  const labelsById = personLabels(menu);
+
+  for (const label of labelsById.values()) {
+    const person = readPerson(label);
+    if (!person || pinnedIds.has(person.id)) {
+      continue;
+    }
+    if (isManagedLabel(label)) {
+      releaseLabel(label, filterable);
+    }
+    ensurePinButton(label, person, false);
+  }
+
+  const section = showing.size > 0 ? ensurePinSection(list, filterable) : null;
+  if (!section) {
+    menu.querySelector('[data-ght-pins]')?.remove();
+  }
+
+  let previousShown: Element | null = section?.firstElementChild ?? null;
+  for (const person of visiblePins(pins, '')) {
+    let label = labelsById.get(person.id) ?? null;
+    if (!label) {
+      label = createPinnedRow(
+        person,
+        checkboxName,
+        selectedLogins(menu).has(person.login.toLowerCase()),
+      );
+      label.setAttribute('data-ght-pin-created', '');
+    } else if (!label.hasAttribute('data-ght-pin-created')) {
+      rememberHiddenState(label);
+    }
+
+    label.setAttribute('data-ght-pinned-row', '');
+    ensurePinButton(label, person, true);
+    if (showing.has(person.id) && section) {
+      label.removeAttribute('hidden');
+      if (label.parentElement !== section || label.previousElementSibling !== previousShown) {
+        section.insertBefore(label, previousShown?.nextSibling ?? null);
+      }
+      previousShown = label;
+    } else {
+      label.setAttribute('hidden', '');
+      if (filterable && label.parentElement !== filterable) {
+        filterable.append(label);
+      }
+    }
+  }
+
+  suppressDuplicateCheckboxes(menu, pinnedIds);
+}
+
+function ensurePinSection(
+  list: Element,
+  filterable: HTMLElement | null,
+): HTMLElement {
+  const parent = filterable ?? list;
+  let section = parent.querySelector<HTMLElement>(':scope > [data-ght-pins]');
+  if (!section) {
+    section = document.createElement('div');
+    section.setAttribute('data-ght-pins', '');
+    const divider = document.createElement('div');
+    divider.className = 'select-menu-divider';
+    divider.textContent = 'Pinned';
+    section.append(divider);
+  }
+
+  const template = parent.querySelector(':scope > template');
+  if (template) {
+    if (section.nextElementSibling !== template) {
+      parent.insertBefore(section, template);
+    }
+  } else if (section.parentElement !== parent) {
+    parent.prepend(section);
+  }
+  return section;
+}
+
+function personLabels(menu: HTMLElement): Map<string, HTMLLabelElement> {
+  const labels = new Map<string, HTMLLabelElement>();
+  for (const label of menu.querySelectorAll<HTMLLabelElement>('label.select-menu-item')) {
+    const person = readPerson(label);
+    if (!person || labels.has(person.id)) {
+      continue;
+    }
+    labels.set(person.id, label);
+  }
+  return labels;
+}
+
+function isManagedLabel(label: HTMLElement): boolean {
+  return (
+    label.hasAttribute('data-ght-pinned-row') ||
+    label.hasAttribute('data-ght-pin-moved') ||
+    label.hasAttribute('data-ght-pin-created')
+  );
+}
+
+function rememberHiddenState(label: HTMLElement): void {
+  if (label.hasAttribute('data-ght-pin-moved')) {
+    return;
+  }
+  label.setAttribute('data-ght-pin-moved', '');
+  if (label.hasAttribute('hidden')) {
+    label.setAttribute('data-ght-was-hidden', '');
+  }
+}
+
+function suppressDuplicateCheckboxes(menu: HTMLElement, pinnedIds: ReadonlySet<string>): void {
+  const labels = Array.from(menu.querySelectorAll<HTMLLabelElement>('label.select-menu-item'));
+  labels.sort((left, right) => Number(!left.hasAttribute('data-ght-pinned-row')) - Number(!right.hasAttribute('data-ght-pinned-row')));
+  const seen = new Set<string>();
+
+  for (const label of labels) {
+    const person = readPerson(label);
+    if (!person || !pinnedIds.has(person.id)) {
+      continue;
+    }
+    const input = label.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!input || !isUserCheckboxName(input.name)) {
+      continue;
+    }
+
+    if (!seen.has(person.id)) {
+      seen.add(person.id);
+      if (label.hasAttribute('data-ght-pinned-row')) {
+        input.disabled = false;
+        input.removeAttribute('data-ght-pin-disabled');
+      }
+      continue;
+    }
+
+    input.disabled = true;
+    input.setAttribute('data-ght-pin-disabled', '');
+    if (!label.hasAttribute('data-ght-pinned-row')) {
+      label.setAttribute('hidden', '');
+      label.setAttribute('data-ght-pin-duplicate', '');
+    }
+  }
+}
+
+function restoreDuplicateCheckboxes(menu: HTMLElement): void {
+  for (const input of menu.querySelectorAll<HTMLInputElement>('input[data-ght-pin-disabled]')) {
+    input.disabled = false;
+    input.removeAttribute('data-ght-pin-disabled');
+  }
+  for (const label of menu.querySelectorAll<HTMLElement>('[data-ght-pin-duplicate]')) {
+    label.removeAttribute('hidden');
+    label.removeAttribute('data-ght-pin-duplicate');
+  }
+}
+
+function releaseLabel(label: HTMLElement, filterable: HTMLElement | null): void {
+  label.removeAttribute('data-ght-pinned-row');
+  if (label.hasAttribute('data-ght-pin-created')) {
+    label.remove();
     return;
   }
 
-  const selected = selectedLogins(menu);
-  const section = document.createElement('div');
-  section.setAttribute('data-ght-pins', '');
-  const divider = document.createElement('div');
-  divider.className = 'select-menu-divider';
-  divider.textContent = 'Pinned';
-  section.append(divider);
-
-  for (const person of showing) {
-    const native = natives.find((label) => readPerson(label)?.id === person.id) ?? null;
-    section.append(createPinnedRow(person, checkboxName, native, selected));
-  }
-
-  const filterable = list.querySelector('[data-filterable-for]');
-  if (filterable) {
-    list.insertBefore(section, filterable);
+  label.removeAttribute('data-ght-pin-moved');
+  if (label.hasAttribute('data-ght-was-hidden')) {
+    label.setAttribute('hidden', '');
+    label.removeAttribute('data-ght-was-hidden');
   } else {
-    list.prepend(section);
+    label.removeAttribute('hidden');
   }
+  filterable?.append(label);
 }
 
 function createPinnedRow(
   person: PinnedPerson,
   checkboxName: string,
-  native: HTMLLabelElement | null,
-  selected: Set<string>,
+  checked: boolean,
 ): HTMLLabelElement {
-  const checked = native
-    ? nativeChecked(native)
-    : selected.has(person.login.toLowerCase());
   const label = document.createElement('label');
   label.className = 'select-menu-item text-normal';
   label.setAttribute('role', 'menuitemcheckbox');
   label.setAttribute('aria-checked', checked ? 'true' : 'false');
   label.tabIndex = 0;
-  label.setAttribute('data-ght-pinned-row', '');
   label.dataset.ghtPersonId = person.id;
   label.dataset.ghtPersonLogin = person.login;
   label.dataset.ghtPersonName = person.name;
   label.dataset.ghtPersonAvatar = person.avatarUrl;
 
   label.append(checkIcon());
-  if (!native) {
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = checkboxName;
-    input.value = person.id;
-    input.checked = checked;
-    input.style.display = 'none';
-    label.append(input);
-  } else {
-    label.addEventListener('click', (event) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest('[data-ght-pin-button]')) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      native.click();
-      label.setAttribute(
-        'aria-checked',
-        nativeChecked(native) ? 'true' : 'false',
-      );
-    });
-  }
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = checkboxName;
+  input.value = person.id;
+  input.defaultChecked = checked;
+  input.checked = checked;
+  input.style.display = 'none';
+  label.append(input);
 
   const gravatar = document.createElement('div');
   gravatar.className = 'select-menu-item-gravatar';
@@ -214,33 +330,6 @@ function ensurePinButton(
 
   button.setAttribute('aria-pressed', pinned ? 'true' : 'false');
   button.setAttribute('aria-label', `${pinned ? 'Unpin' : 'Pin'} ${person.login}`);
-}
-
-function nativePersonLabels(menu: HTMLElement): HTMLLabelElement[] {
-  return Array.from(
-    menu.querySelectorAll<HTMLLabelElement>('label.select-menu-item'),
-  ).filter(
-    (label) => !label.closest('[data-ght-pins]') && readPerson(label) !== null,
-  );
-}
-
-function suppressNative(label: HTMLLabelElement): void {
-  if (!label.hasAttribute('hidden')) {
-    label.setAttribute('hidden', '');
-    label.setAttribute('data-ght-pin-hidden', '');
-  }
-}
-
-function restoreSuppressed(menu: HTMLElement): void {
-  for (const label of menu.querySelectorAll<HTMLElement>('[data-ght-pin-hidden]')) {
-    label.removeAttribute('hidden');
-    label.removeAttribute('data-ght-pin-hidden');
-  }
-}
-
-function nativeChecked(label: HTMLElement): boolean {
-  const input = label.querySelector<HTMLInputElement>('input[type="checkbox"]');
-  return input?.checked === true || label.getAttribute('aria-checked') === 'true';
 }
 
 function selectedLogins(menu: HTMLElement): Set<string> {

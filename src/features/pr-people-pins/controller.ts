@@ -31,6 +31,8 @@ export class PeoplePinsController {
     this.observer = null;
     if (this.listening) {
       document.removeEventListener('click', this.onClick, true);
+      document.removeEventListener('change', this.onChange, true);
+      document.removeEventListener('toggle', this.onToggle, true);
       document.removeEventListener('input', this.onInput, true);
       this.listening = false;
     }
@@ -79,6 +81,8 @@ export class PeoplePinsController {
     }
 
     document.addEventListener('click', this.onClick, true);
+    document.addEventListener('change', this.onChange, true);
+    document.addEventListener('toggle', this.onToggle, true);
     document.addEventListener('input', this.onInput, true);
     this.listening = true;
   }
@@ -110,6 +114,28 @@ export class PeoplePinsController {
     this.pins = next;
     this.sync();
     void this.persist(next);
+  };
+
+  private readonly onChange = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (!target.closest('[data-ght-pinned-row]')) {
+      return;
+    }
+    this.sync();
+  };
+
+  private readonly onToggle = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.id !== 'reviewers-select-menu' && target.id !== 'assignees-select-menu') {
+      return;
+    }
+    this.sync();
   };
 
   private readonly onInput = (event: Event): void => {

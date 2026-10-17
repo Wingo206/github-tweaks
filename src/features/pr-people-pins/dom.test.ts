@@ -43,10 +43,16 @@ describe('people pin menu', () => {
 
     const reviewers = document.getElementById('reviewers-select-menu')!;
     expect(reviewers.querySelectorAll('[data-ght-pins]')).toHaveLength(1);
+    expect(reviewers.querySelector('[data-ght-pins]')?.parentElement?.hasAttribute('data-filterable-for')).toBe(true);
     expect(pinnedLogins(reviewers)).toEqual(['ada', 'ben', 'cara', 'erin']);
-    expect(nativeLabel('cara')?.hasAttribute('data-ght-pin-hidden')).toBe(true);
-    expect(reviewers.querySelector('[data-ght-pinned-row][data-ght-person-id="11"]')?.getAttribute('aria-checked')).toBe('true');
+    expect(reviewers.querySelectorAll('input[value="11"]')).toHaveLength(1);
+    const caraInput = reviewers.querySelector<HTMLInputElement>('input[value="11"]')!;
+    expect(caraInput.closest('[data-ght-pinned-row]')).not.toBeNull();
+    expect(caraInput.checked).toBe(true);
+    expect(caraInput.disabled).toBe(false);
+    expect(caraInput.closest('[data-ght-pinned-row]')?.getAttribute('aria-checked')).toBe('true');
     expect(pinnedInput('erin', reviewers)?.checked).toBe(true);
+    expect(pinnedInput('erin', reviewers)?.defaultChecked).toBe(true);
     expect(pinnedInput('ada', reviewers)?.name).toBe('reviewer_user_ids[]');
     const pinnedAvatar = reviewers.querySelector<HTMLImageElement>(
       '[data-ght-pinned-row] img.js-avatar',
@@ -61,14 +67,29 @@ describe('people pin menu', () => {
 
     const assignees = document.getElementById('assignees-select-menu')!;
     expect(pinnedLogins(assignees)).toEqual(['ada', 'ben', 'cara', 'erin']);
-    expect(nativeLabel('ada')?.hasAttribute('hidden')).toBe(true);
-    expect(nativeLabel('ada')?.hasAttribute('data-ght-pin-hidden')).toBe(false);
+    expect(assignees.querySelectorAll('input[value="33"]')).toHaveLength(1);
+    const adaRow = assignees.querySelector('input[value="33"]')!.closest('label')!;
+    expect(adaRow.hasAttribute('data-ght-pinned-row')).toBe(true);
+    expect(adaRow.hasAttribute('hidden')).toBe(false);
+    expect(pinnedInput('ada', assignees)?.name).toBe('issue[user_assignee_ids][]');
     expect(pinnedInput('erin', assignees)?.checked).toBe(false);
     expect(pinnedInput('erin', assignees)?.name).toBe('issue[user_assignee_ids][]');
-    expect(pinnedInput('ada', assignees)).toBeNull();
 
     const team = nativeLabel('acme/platform');
     expect(team?.querySelector('[data-ght-pin-button]')).toBeNull();
+  });
+
+  it('leaves rows in place when nothing changed so hover state survives', () => {
+    document.body.innerHTML = fixture;
+    syncPeoplePins(pins);
+
+    const observer = new MutationObserver(() => {});
+    observer.observe(document.body, { childList: true, subtree: true });
+    syncPeoplePins(pins);
+    const records = observer.takeRecords();
+    observer.disconnect();
+
+    expect(records).toHaveLength(0);
   });
 
   it('adds a pin button on person rows and removes every tweak on cleanup', () => {
@@ -106,35 +127,72 @@ describe('people pin menu', () => {
     filter.value = 'zzz';
     syncPeoplePins(pins);
     expect(document.querySelector('#reviewers-select-menu [data-ght-pins]')).toBeNull();
-    expect(nativeLabel('cara')?.hasAttribute('hidden')).toBe(true);
-    expect(nativeLabel('ben')?.hasAttribute('hidden')).toBe(true);
+    expect(labelFor('cara')?.hasAttribute('hidden')).toBe(true);
+    expect(labelFor('ben')?.hasAttribute('hidden')).toBe(true);
     expect(nativeLabel('acme/platform')?.hasAttribute('hidden')).toBe(false);
   });
 
-  it('forwards a pinned row click to GitHub’s existing checkbox', () => {
+  it('drops a pinned person from the form when their duplicate row stays checked', () => {
     document.body.innerHTML = fixture;
     syncPeoplePins([cara]);
-    const native = nativeLabel('cara')!;
-    native.addEventListener('click', () => {
-      native.setAttribute('aria-checked', 'false');
-      const input = native.querySelector<HTMLInputElement>('input')!;
-      input.checked = false;
+    const reviewers = document.getElementById('reviewers-select-menu')!;
+    const filterable = reviewers.querySelector('[data-filterable-for]')!;
+    const duplicate = document.createElement('label');
+    duplicate.className = 'select-menu-item text-normal';
+    duplicate.innerHTML =
+      '<input type="checkbox" name="reviewer_user_ids[]" value="11" checked><span class="js-username">cara</span>';
+    filterable.append(duplicate);
+    syncPeoplePins([cara]);
+
+    const pinned = reviewers.querySelector<HTMLInputElement>('[data-ght-pinned-row] input')!;
+    const duplicateInput = duplicate.querySelector<HTMLInputElement>('input')!;
+    expect(duplicate.hidden).toBe(true);
+    expect(duplicateInput.disabled).toBe(true);
+    expect(pinned.disabled).toBe(false);
+    expect(pinned.checked).toBe(true);
+
+    pinned.closest('label')!.click();
+
+    expect(pinned.checked).toBe(false);
+    const form = pinned.form;
+    expect(form).not.toBeNull();
+    expect(new FormData(form!).getAll('reviewer_user_ids[]')).not.toContain('11');
+  });
+
+  it('toggles the real checkbox when a pinned person is clicked', () => {
+    document.body.innerHTML = fixture;
+    syncPeoplePins([cara]);
+    const reviewers = document.getElementById('reviewers-select-menu')!;
+    expect(reviewers.querySelectorAll('input[value="11"]')).toHaveLength(1);
+
+    const pinned = reviewers.querySelector<HTMLElement>('[data-ght-pinned-row]')!;
+    const input = pinned.querySelector<HTMLInputElement>('input')!;
+    expect(input.checked).toBe(true);
+    const changes: boolean[] = [];
+    input.addEventListener('change', () => {
+      changes.push(input.checked);
     });
 
-    const pinned = document.querySelector<HTMLElement>(
-      '#reviewers-select-menu [data-ght-pinned-row]',
-    )!;
     pinned.click();
 
-    expect(pinned.getAttribute('aria-checked')).toBe('false');
-    expect(native.querySelector('input')?.hasAttribute('disabled')).toBe(false);
+    expect(input.checked).toBe(false);
+    expect(changes).toEqual([false]);
+    expect(input.disabled).toBe(false);
   });
 });
 
 function pinnedLogins(menu: ParentNode): string[] {
   return Array.from(
-    menu.querySelectorAll('[data-ght-pinned-row] .js-username'),
+    menu.querySelectorAll('[data-ght-pinned-row]:not([hidden]) .js-username'),
     (node) => node.textContent ?? '',
+  );
+}
+
+function labelFor(login: string): HTMLElement | null {
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>('label.select-menu-item')).find(
+      (label) => label.querySelector('.js-username')?.textContent === login,
+    ) ?? null
   );
 }
 
