@@ -81,6 +81,8 @@ test('renders metadata with read-only Viewed indicators', async () => {
   try {
     const page = await context.newPage();
     await page.goto('https://github.com/acme/widgets/pull/42/changes');
+    const retry = page.getByRole('button', { name: 'Retry', exact: true });
+    await expect(retry).toBeVisible();
 
     const worker =
       context.serviceWorkers()[0] ??
@@ -89,7 +91,7 @@ test('renders metadata with read-only Viewed indicators', async () => {
       await browser.storage.local.set({ 'github-token': 'test-token' });
     });
 
-    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await retry.click();
     const indexRow = page.locator('[id="src/index.ts"]');
     await expect(indexRow.locator('.ght-pr-metadata__counts')).toHaveText(
       '+5-2',

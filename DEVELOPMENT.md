@@ -49,11 +49,13 @@ script update is not reflected after an extension reload.
 entrypoints/
   background.ts             token-owning API and storage boundary
   github.content.ts         feature runner and GitHub navigation handling
-  popup/                    token setup and current-page status
+  popup/                    feature toggles, token setup, current-page status
 src/
   features/
     types.ts                shared feature lifecycle
     runner.ts               route-aware feature activation
+    registry.ts             feature ids, popup labels, default on/off
+    flags.ts                persisted on/off toggles (read at page load)
     <feature-id>/           model, DOM, controller, styles.css, tests
   github/                   GraphQL, pull request API, cache, and unit tests
   shared/                   message and domain types

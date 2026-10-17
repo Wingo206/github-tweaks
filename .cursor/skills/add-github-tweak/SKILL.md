@@ -105,7 +105,12 @@ tests/fixtures/<...>.html
 
 - `<feature-id>` is kebab-case and matches `Feature.id`.
 - Skip `controller` only for pure presentational tweaks with no async/API.
-- Register in `entrypoints/github.content.ts` via `FeatureRunner`.
+- Register in two places: add a `FeatureDefinition` (id, popup title,
+  description, `defaultEnabled`) to `src/features/registry.ts`, then add the
+  instance to the `features` map in `entrypoints/github.content.ts`. The
+  popup toggle appears automatically; toggles apply on page reload. Any extra
+  entrypoint the feature owns (e.g. an iframe content script) must check
+  `getFeatureFlags()` itself.
 - Shared API/GraphQL/cache belongs in `src/github/` and message types in
   `src/shared/types.ts` — not buried as one-off fetch logic in the feature
   unless truly feature-private and non-reusable.

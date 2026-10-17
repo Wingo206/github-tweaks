@@ -29,6 +29,7 @@ export interface PullRequestFilesSnapshot {
 
 export type PageStatus =
   | { state: 'idle' }
+  | { state: 'disabled' }
   | { state: 'loading'; ref: PullRequestRef }
   | { state: 'ready'; ref: PullRequestRef; fileCount: number; savedAt: number }
   | { state: 'error'; ref?: PullRequestRef; message: string };

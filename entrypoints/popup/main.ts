@@ -1,9 +1,14 @@
+import { getFeatureFlags, setFeatureEnabled } from '../../src/features/flags';
+import { FEATURES, type FeatureFlags, type FeatureId } from '../../src/features/registry';
 import { sendBackgroundMessage } from '../../src/shared/messaging';
 import type {
   ContentRequest,
   PageStatus,
 } from '../../src/shared/types';
 
+const featureList = getElement<HTMLUListElement>('feature-list');
+const reloadNotice = getElement<HTMLElement>('reload-notice');
+const reloadTabButton = getElement<HTMLButtonElement>('reload-tab');
 const tokenForm = getElement<HTMLFormElement>('token-form');
 const tokenInput = getElement<HTMLInputElement>('token');
 const removeTokenButton = getElement<HTMLButtonElement>('remove-token');
@@ -27,8 +32,17 @@ retryPageButton.addEventListener('click', () => {
   void refreshPageStatus(true);
 });
 
+reloadTabButton.addEventListener('click', () => {
+  void reloadActiveTab();
+});
+
 async function initialize(): Promise<void> {
   clearError();
+  try {
+    renderFeatureToggles(await getFeatureFlags());
+  } catch (error) {
+    showError(error);
+  }
   try {
     const auth = await sendBackgroundMessage<{ configured: boolean }>({
       type: 'auth:get',
@@ -99,6 +113,60 @@ async function refreshPageStatus(retry: boolean): Promise<void> {
   }
 }
 
+function renderFeatureToggles(flags: FeatureFlags): void {
+  featureList.replaceChildren(
+    ...FEATURES.map((feature) => {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = flags[feature.id];
+      checkbox.addEventListener('change', () => {
+        void toggleFeature(feature.id, checkbox);
+      });
+
+      const title = document.createElement('span');
+      title.className = 'feature-title';
+      title.textContent = feature.title;
+
+      const description = document.createElement('span');
+      description.className = 'feature-description';
+      description.textContent = feature.description;
+
+      const label = document.createElement('label');
+      label.className = 'feature-toggle';
+      label.append(checkbox, title, description);
+
+      const item = document.createElement('li');
+      item.append(label);
+      return item;
+    }),
+  );
+}
+
+async function toggleFeature(
+  id: FeatureId,
+  checkbox: HTMLInputElement,
+): Promise<void> {
+  clearError();
+  checkbox.disabled = true;
+  try {
+    await setFeatureEnabled(id, checkbox.checked);
+    reloadNotice.hidden = false;
+  } catch (error) {
+    checkbox.checked = !checkbox.checked;
+    showError(error);
+  } finally {
+    checkbox.disabled = false;
+  }
+}
+
+async function reloadActiveTab(): Promise<void> {
+  const tab = await getActiveTab();
+  if (tab?.id && tab.url?.startsWith('https://github.com/')) {
+    await browser.tabs.reload(tab.id);
+  }
+  window.close();
+}
+
 async function getActiveTab(): Promise<Browser.tabs.Tab | undefined> {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   return tabs[0];
@@ -117,6 +185,10 @@ function renderPageStatus(status: PageStatus): void {
     case 'idle':
       pageStatus.textContent =
         'Open a pull request changed-files page to use this feature.';
+      pageStatus.dataset.state = 'muted';
+      break;
+    case 'disabled':
+      pageStatus.textContent = 'Pull request sidebar metadata is turned off.';
       pageStatus.dataset.state = 'muted';
       break;
     case 'loading':

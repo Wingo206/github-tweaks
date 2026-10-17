@@ -100,6 +100,51 @@ a,
   text-decoration: underline;
 }
 
+.feature-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feature-toggle {
+  align-items: start;
+  cursor: pointer;
+  display: grid;
+  font-weight: 400;
+  gap: 2px 8px;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+
+.feature-toggle input {
+  flex: none;
+  grid-row: span 2;
+  margin: 2px 0 0;
+}
+
+.feature-title {
+  font-weight: 600;
+}
+
+.feature-description {
+  color: GrayText;
+  line-height: 1.4;
+}
+
+.reload-notice {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.reload-notice .hint {
+  margin: 0;
+}
+
 .status {
   color: GrayText;
   line-height: 1.4;

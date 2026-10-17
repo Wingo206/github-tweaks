@@ -3,6 +3,7 @@ import {
   postRenderedSvgResponse,
 } from '../src/features/mermaid-fullscreen/bridge';
 import { describeMissingDiagram } from '../src/features/mermaid-fullscreen/errors';
+import { getFeatureFlags } from '../src/features/flags';
 
 const GITHUB_ORIGIN = 'https://github.com';
 const SVG_SELECTOR = 'svg#diagram';
@@ -38,7 +39,12 @@ export default defineContentScript({
   matches: ['https://viewscreen.githubusercontent.com/markdown/mermaid*'],
   allFrames: true,
   runAt: 'document_idle',
-  main() {
+  async main() {
+    const flags = await getFeatureFlags();
+    if (!flags['mermaid-fullscreen']) {
+      return;
+    }
+
     window.addEventListener('message', (event: MessageEvent<unknown>) => {
       if (
         event.origin !== GITHUB_ORIGIN ||

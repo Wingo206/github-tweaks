@@ -7,6 +7,10 @@ patch.
 
 ## Features
 
+Every feature is on by default. Turn individual features off or on from the
+**Features** section of the toolbar popup; changes apply after reloading the
+GitHub tab.
+
 ### Pull request sidebar metadata
 
 On a pull request's changed-files page, GitHub Tweaks adds:

@@ -1,8 +1,11 @@
+import { getFeatureFlags } from '../src/features/flags';
 import { FeatureRunner } from '../src/features/runner';
 import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
+import { FEATURES, type FeatureId } from '../src/features/registry';
+import type { Feature } from '../src/features/types';
 import type {
   ContentRequest,
   PageStatus,
@@ -11,17 +14,18 @@ import type {
 export default defineContentScript({
   matches: ['https://github.com/*'],
   runAt: 'document_idle',
-  main() {
+  async main() {
+    const flags = await getFeatureFlags();
     const sidebarFeature = new PrSidebarMetadataFeature();
-    const mermaidFeature = new MermaidFullscreenFeature();
-    const handbackFeature = new PrHandbackAssigneeFeature();
-    const peoplePinsFeature = new PrPeoplePinsFeature();
-    const runner = new FeatureRunner([
-      sidebarFeature,
-      mermaidFeature,
-      handbackFeature,
-      peoplePinsFeature,
-    ]);
+    const features: Record<FeatureId, Feature> = {
+      'pr-sidebar-metadata': sidebarFeature,
+      'mermaid-fullscreen': new MermaidFullscreenFeature(),
+      'pr-handback-assignee': new PrHandbackAssigneeFeature(),
+      'pr-people-pins': new PrPeoplePinsFeature(),
+    };
+    const runner = new FeatureRunner(
+      FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),
+    );
     let lastUrl = window.location.href;
     let syncQueued = false;
 
@@ -59,6 +63,10 @@ export default defineContentScript({
         _sender,
         sendResponse: (status: PageStatus) => void,
       ) => {
+        if (!flags['pr-sidebar-metadata']) {
+          sendResponse({ state: 'disabled' });
+          return;
+        }
         if (request.type === 'page:get-status') {
           sendResponse(sidebarFeature.getStatus());
           return;
