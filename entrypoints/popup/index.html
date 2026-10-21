@@ -88,6 +88,21 @@
         <button id="retry-page" type="button">Retry metadata</button>
       </section>
 
+      <section aria-labelledby="diagnostics-heading">
+        <h2 id="diagnostics-heading">Diagnostics</h2>
+        <p class="hint">
+          Mermaid fullscreen errors and trace, read from the active GitHub tab.
+        </p>
+        <div class="button-row">
+          <button id="copy-mermaid-logs" type="button">Copy Mermaid logs</button>
+          <button id="download-mermaid-logs" type="button">Download</button>
+          <button id="clear-mermaid-logs" class="link-button" type="button">
+            Clear
+          </button>
+        </div>
+        <p id="mermaid-logs-status" class="status" role="status">Checking…</p>
+      </section>
+
       <p id="error" class="error" role="alert" hidden></p>
     </main>
     <script type="module" src="./main.ts"></script>

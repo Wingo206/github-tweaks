@@ -100,6 +100,16 @@ a,
   text-decoration: underline;
 }
 
+.button-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.button-row .link-button {
+  margin-left: auto;
+}
+
 .companion-grid {
   align-items: center;
   display: grid;

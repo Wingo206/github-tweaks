@@ -1,4 +1,9 @@
 import { getFeatureFlags, setFeatureEnabled } from '../../src/features/flags';
+import {
+  mermaidLogFilename,
+  summarizeMermaidLogs,
+  type MermaidLogExport,
+} from '../../src/features/mermaid-fullscreen/diagnostics';
 import { FEATURES, type FeatureFlags, type FeatureId } from '../../src/features/registry';
 import { sendBackgroundMessage } from '../../src/shared/messaging';
 import type {
@@ -21,8 +26,29 @@ const errorMessage = getElement<HTMLElement>('error');
 const companionPortInput = getElement<HTMLInputElement>('companion-port');
 const companionTokenInput = getElement<HTMLInputElement>('companion-token');
 const companionStatus = getElement<HTMLElement>('companion-status');
+const copyMermaidLogsButton = getElement<HTMLButtonElement>('copy-mermaid-logs');
+const downloadMermaidLogsButton = getElement<HTMLButtonElement>(
+  'download-mermaid-logs',
+);
+const clearMermaidLogsButton = getElement<HTMLButtonElement>('clear-mermaid-logs');
+const mermaidLogsStatus = getElement<HTMLElement>('mermaid-logs-status');
+
+const CONTENT_SCRIPT_MISSING =
+  'GitHub Tweaks is not active on this tab. Reload it and try again.';
 
 void initialize();
+
+copyMermaidLogsButton.addEventListener('click', () => {
+  void exportMermaidLogs('copy');
+});
+
+downloadMermaidLogsButton.addEventListener('click', () => {
+  void exportMermaidLogs('download');
+});
+
+clearMermaidLogsButton.addEventListener('click', () => {
+  void clearMermaidLogs();
+});
 
 companionPortInput.addEventListener('change', () => {
   void saveCompanionSettings({ port: Number(companionPortInput.value) });
@@ -71,7 +97,11 @@ async function initialize(): Promise<void> {
   } catch (error) {
     showError(error);
   }
-  await Promise.all([refreshPageStatus(false), refreshCompanionStatus()]);
+  await Promise.all([
+    refreshPageStatus(false),
+    refreshCompanionStatus(),
+    refreshMermaidLogCount(),
+  ]);
 }
 
 async function saveCompanionSettings(update: {
@@ -195,6 +225,95 @@ async function refreshPageStatus(retry: boolean): Promise<void> {
   } finally {
     retryPageButton.disabled = false;
   }
+}
+
+async function requestMermaidLogs(
+  type: 'mermaid:get-logs' | 'mermaid:clear-logs',
+): Promise<MermaidLogExport> {
+  const tab = await getActiveTab();
+  if (!tab?.id || !tab.url?.startsWith('https://github.com/')) {
+    throw new Error('Open a GitHub tab to read its Mermaid logs.');
+  }
+
+  const request: ContentRequest = { type };
+  let logs: MermaidLogExport | undefined;
+  try {
+    logs = (await browser.tabs.sendMessage(tab.id, request)) as
+      | MermaidLogExport
+      | undefined;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Receiving end does not exist')) {
+      throw new Error(CONTENT_SCRIPT_MISSING);
+    }
+    throw error;
+  }
+  if (!logs) {
+    throw new Error(CONTENT_SCRIPT_MISSING);
+  }
+  return logs;
+}
+
+async function runMermaidLogAction(
+  pending: string,
+  action: () => Promise<string>,
+): Promise<void> {
+  copyMermaidLogsButton.disabled = true;
+  downloadMermaidLogsButton.disabled = true;
+  clearMermaidLogsButton.disabled = true;
+  mermaidLogsStatus.textContent = pending;
+  mermaidLogsStatus.dataset.state = 'muted';
+  try {
+    mermaidLogsStatus.textContent = await action();
+    mermaidLogsStatus.dataset.state = 'success';
+  } catch (error) {
+    mermaidLogsStatus.textContent =
+      error instanceof Error ? error.message : 'Couldn’t read the Mermaid logs.';
+    mermaidLogsStatus.dataset.state = 'error';
+  } finally {
+    copyMermaidLogsButton.disabled = false;
+    downloadMermaidLogsButton.disabled = false;
+    clearMermaidLogsButton.disabled = false;
+  }
+}
+
+async function refreshMermaidLogCount(): Promise<void> {
+  await runMermaidLogAction('Checking…', async () => {
+    const logs = await requestMermaidLogs('mermaid:get-logs');
+    return `${summarizeMermaidLogs(logs)} recorded.`;
+  });
+  mermaidLogsStatus.dataset.state = 'muted';
+}
+
+async function exportMermaidLogs(mode: 'copy' | 'download'): Promise<void> {
+  await runMermaidLogAction('Reading logs…', async () => {
+    const logs = await requestMermaidLogs('mermaid:get-logs');
+    const json = JSON.stringify(logs, null, 2);
+    if (mode === 'copy') {
+      await navigator.clipboard.writeText(json);
+    } else {
+      downloadText(json, mermaidLogFilename(logs.exportedAt));
+    }
+    const summary = summarizeMermaidLogs(logs);
+    return mode === 'copy' ? `Copied ${summary}.` : `Downloaded ${summary}.`;
+  });
+}
+
+async function clearMermaidLogs(): Promise<void> {
+  await runMermaidLogAction('Clearing logs…', async () => {
+    const logs = await requestMermaidLogs('mermaid:clear-logs');
+    return `Cleared. ${summarizeMermaidLogs(logs)} recorded.`;
+  });
+}
+
+function downloadText(text: string, filename: string): void {
+  const url = URL.createObjectURL(
+    new Blob([text], { type: 'application/json' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function renderFeatureToggles(flags: FeatureFlags): void {

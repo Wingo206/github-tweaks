@@ -139,4 +139,6 @@ export interface BackgroundResponse<T = unknown> {
 
 export type ContentRequest =
   | { type: 'page:get-status' }
-  | { type: 'page:retry' };
+  | { type: 'page:retry' }
+  | { type: 'mermaid:get-logs' }
+  | { type: 'mermaid:clear-logs' };

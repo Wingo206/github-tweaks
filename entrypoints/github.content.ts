@@ -1,6 +1,11 @@
 import { getFeatureFlags } from '../src/features/flags';
 import { FeatureRunner } from '../src/features/runner';
 import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
+import {
+  clearMermaidLogs,
+  collectMermaidLogs,
+  type MermaidLogExport,
+} from '../src/features/mermaid-fullscreen/diagnostics';
 import { OpenInCursorFeature } from '../src/features/open-in-cursor';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
@@ -65,8 +70,17 @@ export default defineContentScript({
       (
         request: ContentRequest,
         _sender,
-        sendResponse: (status: PageStatus) => void,
+        sendResponse: (response: PageStatus | MermaidLogExport) => void,
       ) => {
+        if (request.type === 'mermaid:get-logs') {
+          sendResponse(collectMermaidLogs());
+          return;
+        }
+        if (request.type === 'mermaid:clear-logs') {
+          clearMermaidLogs();
+          sendResponse(collectMermaidLogs());
+          return;
+        }
         if (!flags['pr-sidebar-metadata']) {
           sendResponse({ state: 'disabled' });
           return;
