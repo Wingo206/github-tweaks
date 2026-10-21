@@ -3,7 +3,8 @@ export type FeatureId =
   | 'mermaid-fullscreen'
   | 'pr-handback-assignee'
   | 'pr-people-pins'
-  | 'open-in-cursor';
+  | 'open-in-cursor'
+  | 'pr-tab-favicon';
 
 export interface FeatureDefinition {
   id: FeatureId;
@@ -43,6 +44,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'open-in-cursor',
     title: 'Open in Cursor',
     description: 'Open PR lines, review comments, and files in the matching local Cursor window.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-tab-favicon',
+    title: 'Pull request tab icons',
+    description: 'Per-tab favicon and title prefix for Conversation, Commits, Checks, and Files changed.',
     defaultEnabled: true,
   },
 ];

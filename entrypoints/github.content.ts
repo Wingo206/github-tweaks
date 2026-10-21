@@ -5,6 +5,7 @@ import { OpenInCursorFeature } from '../src/features/open-in-cursor';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
+import { PrTabFaviconFeature } from '../src/features/pr-tab-favicon';
 import { FEATURES, type FeatureId } from '../src/features/registry';
 import type { Feature } from '../src/features/types';
 import type {
@@ -24,6 +25,7 @@ export default defineContentScript({
       'pr-handback-assignee': new PrHandbackAssigneeFeature(),
       'pr-people-pins': new PrPeoplePinsFeature(),
       'open-in-cursor': new OpenInCursorFeature(),
+      'pr-tab-favicon': new PrTabFaviconFeature(),
     };
     const runner = new FeatureRunner(
       FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),
