@@ -1,0 +1,37 @@
+---
+description: Rebuild the extension (and companion) after code changes so the loaded build stays current
+alwaysApply: true
+---
+
+# Rebuild after changes
+
+Chrome loads the unpacked build from `.output/chrome-mv3`. It does not pick up
+source edits on its own, so rebuild before you hand work back to the user.
+
+## Extension code
+
+After you change anything that ships in the extension (`src/`, `entrypoints/`,
+`wxt.config.ts`, `package.json`, or `public/`):
+
+1. Run `pnpm check`. It runs typecheck, unit tests, and e2e tests, and finishes
+   with `pnpm build`. If you only need a fresh build (for example, a docs or
+   style-only follow-up after a passing check), run `pnpm build`.
+2. Confirm the build passed and `.output/chrome-mv3` was updated.
+3. Tell the user to click reload on GitHub Tweaks in `chrome://extensions`,
+   then refresh their GitHub tabs.
+
+## Companion code
+
+After you change anything under `companion/`:
+
+1. Run `pnpm companion:install`. It builds the companion, packages the
+   `.vsix`, and installs it into Cursor.
+2. Tell the user to reload each Cursor window. The first reloaded window
+   restarts the companion server with the new version.
+
+## Skip the rebuild when
+
+- Only docs (`*.md`), tests, fixtures, or `.cursor/` files changed.
+- The user explicitly asks you not to build.
+
+If a build fails, report the failure instead of handing back a stale build.
