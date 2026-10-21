@@ -16,6 +16,14 @@ const TITLE_LABELS: Record<PrTab, string> = {
   files: 'Files',
 };
 
+/** Primer foreground colors for light and dark themes. */
+const BADGE_COLORS: Record<PrTab, { light: string; dark: string }> = {
+  conversation: { light: '#0969da', dark: '#4493f8' },
+  commits: { light: '#8250df', dark: '#ab7df8' },
+  checks: { light: '#bc4c00', dark: '#f0883e' },
+  files: { light: '#1a7f37', dark: '#3fb950' },
+};
+
 /**
  * GitHub's 32×32 Octocat with the bottom-right corner cut away, as in its CI
  * status favicons (`favicon-failure.svg`), leaving x ≥ 12, y ≥ 14 free.
@@ -55,10 +63,11 @@ export function parsePrTab(url: URL): PrTab | null {
 }
 
 export function renderFavicon(tab: PrTab): string {
+  const color = BADGE_COLORS[tab];
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
-    '<style>.mark{fill:#24292e}.badge{fill:#0969da}' +
-    '@media (prefers-color-scheme:dark){.mark{fill:#fff}.badge{fill:#4493f8}}</style>' +
+    `<style>.mark{fill:#24292e}.badge{fill:${color.light}}` +
+    `@media (prefers-color-scheme:dark){.mark{fill:#fff}.badge{fill:${color.dark}}}</style>` +
     `<path class="mark" d="${OCTOCAT_PATH}"/>` +
     `<path class="badge" transform="translate(16 16)" d="${ICON_PATHS[tab]}"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;

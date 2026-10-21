@@ -42,6 +42,14 @@ describe('renderFavicon', () => {
       expect(svg).toContain('prefers-color-scheme:dark');
     }
   });
+
+  it('colors each tab’s badge differently', () => {
+    const badgeFills = PR_TABS.map(
+      (tab) => decodeURIComponent(renderFavicon(tab)).match(/\.badge\{fill:(#[0-9a-f]{6})\}/)?.[1],
+    );
+    expect(badgeFills.every(Boolean)).toBe(true);
+    expect(new Set(badgeFills).size).toBe(PR_TABS.length);
+  });
 });
 
 describe('prefixTitle', () => {

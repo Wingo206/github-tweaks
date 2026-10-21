@@ -85,13 +85,14 @@ the toolbar popup. The current version supports WSL Cursor windows on Windows.
 
 Each pull request tab gets its own favicon badge and title prefix, so several
 tabs of the same PR are easy to tell apart in the tab strip. The favicon stays
-GitHub's Octocat, with a blue page icon in the corner where GitHub normally
+GitHub's Octocat, with a colored page icon in the corner where GitHub normally
 shows CI status:
 
-- **Conversation** — speech bubbles, `Conversation · …`
-- **Commits** (including a single commit's diff) — commit dot, `Commits · …`
-- **Checks** — checklist, `Checks · …`
-- **Files changed** (`/files` and `/changes`) — file diff, `Files · …`
+- **Conversation** — blue speech bubbles, `Conversation · …`
+- **Commits** (including a single commit's diff) — purple commit dot,
+  `Commits · …`
+- **Checks** — orange checklist, `Checks · …`
+- **Files changed** (`/files` and `/changes`) — green file diff, `Files · …`
 
 The favicon follows the system light or dark theme. Other GitHub pages keep
 the normal favicon.
