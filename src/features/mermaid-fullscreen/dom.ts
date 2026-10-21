@@ -20,6 +20,7 @@ export const OPEN_BUTTON_ATTRIBUTE = 'data-ght-mermaid-open';
 export const NATIVE_HIDDEN_ATTRIBUTE = 'data-ght-mermaid-native-hidden';
 export const NATIVE_FALLBACK_ATTRIBUTE = 'data-ght-mermaid-native-fallback';
 export const MODAL_ATTRIBUTE = 'data-ght-mermaid-modal';
+export const RENDER_ERROR_CLASS = 'render-error';
 export const OPEN_CLASS = 'ght-mermaid-open';
 export const VIEWPORT_CLASS = 'ght-mermaid-viewport';
 export const STAGE_CLASS = 'ght-mermaid-stage';
@@ -35,6 +36,19 @@ const CLOSE_ICON_PATH =
   'M5.72 5.72a.75.75 0 011.06 0L12 10.94l5.22-5.22a.75.75 0 111.06 1.06L13.06 12l5.22 5.22a.75.75 0 11-1.06 1.06L12 13.06l-5.22 5.22a.75.75 0 01-1.06-1.06L10.94 12 5.72 6.78a.75.75 0 010-1.06z';
 
 export type ModalContentState = 'loading' | 'ready' | 'error';
+
+export interface MermaidRenderInfo {
+  viewBox: string | null;
+  contentWidth: number;
+  contentHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  scale: number;
+  /** False when the viewport had no size, so the default transform was kept. */
+  fitted: boolean;
+  renderedWidth: number;
+  renderedHeight: number;
+}
 
 export interface MermaidModalHandlers {
   onClose: () => void;
@@ -56,6 +70,23 @@ export function findNativeDetails(embed: HTMLElement): HTMLDetailsElement | null
   const summary = embed.querySelector<HTMLElement>(NATIVE_OPEN_SELECTOR);
   const details = summary?.closest('details');
   return details instanceof HTMLDetailsElement ? details : null;
+}
+
+export function findAllNativeDetails(embed: HTMLElement): HTMLDetailsElement[] {
+  return Array.from(embed.querySelectorAll(NATIVE_OPEN_SELECTOR))
+    .map((summary) => summary.closest('details'))
+    .filter(
+      (details): details is HTMLDetailsElement =>
+        details instanceof HTMLDetailsElement,
+    );
+}
+
+export function findVisibleNativeDetails(
+  embed: HTMLElement,
+): HTMLDetailsElement[] {
+  return findAllNativeDetails(embed).filter(
+    (details) => !details.hasAttribute(NATIVE_HIDDEN_ATTRIBUTE),
+  );
 }
 
 export function findOpenButton(embed: HTMLElement): HTMLButtonElement | null {
@@ -84,6 +115,11 @@ export function hideNativeOpenControl(details: HTMLDetailsElement): void {
 export function showNativeOpenControl(details: HTMLDetailsElement): void {
   details.removeAttribute(NATIVE_HIDDEN_ATTRIBUTE);
   details.hidden = false;
+}
+
+/** GitHub could not render this diagram, so there is nothing to open. */
+export function isRenderError(embed: HTMLElement): boolean {
+  return embed.classList.contains(RENDER_ERROR_CLASS);
 }
 
 export function isNativeFallback(embed: HTMLElement): boolean {
@@ -135,16 +171,12 @@ export function mountOpenControl(embed: HTMLElement): HTMLButtonElement | null {
 
   const existing = findOpenButton(embed);
   if (existing) {
-    const details = findNativeDetails(embed);
-    if (details && !details.hasAttribute(NATIVE_HIDDEN_ATTRIBUTE)) {
-      hideNativeOpenControl(details);
-    }
+    reconcileOpenControl(embed);
     return existing;
   }
 
   const actions = findActionsRow(embed);
-  const details = findNativeDetails(embed);
-  if (!actions || !details) {
+  if (!actions || !findNativeDetails(embed)) {
     return null;
   }
 
@@ -154,16 +186,47 @@ export function mountOpenControl(embed: HTMLElement): HTMLButtonElement | null {
   button.setAttribute('aria-label', 'Open dialog');
   button.setAttribute(OPEN_BUTTON_ATTRIBUTE, 'true');
   button.append(createExpandIcon());
+  insertOpenButton(actions, button);
 
+  findAllNativeDetails(embed).forEach(hideNativeOpenControl);
+  return button;
+}
+
+function insertOpenButton(actions: HTMLElement, button: HTMLElement): void {
   const copy = actions.querySelector('clipboard-copy');
   if (copy) {
     actions.insertBefore(button, copy);
   } else {
     actions.append(button);
   }
+}
 
-  hideNativeOpenControl(details);
-  return button;
+export interface OpenControlRepair {
+  /** Native open controls GitHub showed again after we mounted. */
+  reshown: number;
+  /** Our button was moved into the toolbar GitHub is now showing. */
+  moved: boolean;
+}
+
+/**
+ * GitHub can rebuild a diagram's toolbar after we mount. Hide any native open
+ * control it brought back and keep our button in the toolbar that is showing.
+ */
+export function reconcileOpenControl(embed: HTMLElement): OpenControlRepair {
+  const button = findOpenButton(embed);
+  const visible = findVisibleNativeDetails(embed);
+  if (!button || visible.length === 0) {
+    return { reshown: 0, moved: false };
+  }
+
+  let moved = false;
+  const row = visible[0]!.closest<HTMLElement>(ACTIONS_SELECTOR);
+  if (row && button.parentElement !== row) {
+    insertOpenButton(row, button);
+    moved = true;
+  }
+  visible.forEach(hideNativeOpenControl);
+  return { reshown: visible.length, moved };
 }
 
 export function unmountOpenControl(embed: HTMLElement): void {
@@ -263,6 +326,7 @@ export class MermaidModal {
   private active = true;
   private contentState: ModalContentState = 'loading';
   private parseErrorDetail: string | null = null;
+  private renderInfoValue: MermaidRenderInfo | null = null;
 
   constructor(handlers: MermaidModalHandlers) {
     this.handlers = handlers;
@@ -321,6 +385,14 @@ export class MermaidModal {
 
   get parseError(): string | null {
     return this.parseErrorDetail;
+  }
+
+  get renderInfo(): MermaidRenderInfo | null {
+    return this.renderInfoValue;
+  }
+
+  get isConnected(): boolean {
+    return this.root.isConnected;
   }
 
   showLoading(): void {
@@ -429,11 +501,25 @@ export class MermaidModal {
     this.viewport.addEventListener('auxclick', this.onAuxClick);
 
     this.measureBaseSize(svg);
-    this.fitToViewport();
+    const fitted = this.fitToViewport();
     this.applyTransform();
+
+    const rendered = svg.getBoundingClientRect();
+    this.renderInfoValue = {
+      viewBox: svg.getAttribute('viewBox'),
+      contentWidth: this.baseWidth,
+      contentHeight: this.baseHeight,
+      viewportWidth: this.viewport.clientWidth,
+      viewportHeight: this.viewport.clientHeight,
+      scale: this.transform.scale,
+      fitted,
+      renderedWidth: Math.round(rendered.width),
+      renderedHeight: Math.round(rendered.height),
+    };
   }
 
   private teardownViewport(): void {
+    this.renderInfoValue = null;
     if (!this.viewport) {
       return;
     }
@@ -467,14 +553,14 @@ export class MermaidModal {
     this.stage.style.height = `${this.baseHeight}px`;
   }
 
-  private fitToViewport(): void {
+  private fitToViewport(): boolean {
     if (!this.viewport) {
-      return;
+      return false;
     }
     const viewportWidth = this.viewport.clientWidth;
     const viewportHeight = this.viewport.clientHeight;
     if (viewportWidth <= 0 || viewportHeight <= 0) {
-      return;
+      return false;
     }
 
     const scale = clampScale(
@@ -489,6 +575,7 @@ export class MermaidModal {
       x: Math.max(0, (viewportWidth - this.baseWidth * scale) / 2),
       y: Math.max(0, (viewportHeight - this.baseHeight * scale) / 2),
     };
+    return true;
   }
 
   private applyTransform(): void {

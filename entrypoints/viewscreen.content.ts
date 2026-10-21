@@ -55,7 +55,13 @@ export default defineContentScript({
       }
 
       const { requestId } = event.data;
+      const startedAt = performance.now();
       void waitForDiagramSvg().then((svg) => {
+        console.debug('[ght-mermaid] viewscreen svg request', {
+          found: svg !== null,
+          waitedMs: Math.round(performance.now() - startedAt),
+          svgLength: svg?.outerHTML.length ?? 0,
+        });
         if (!svg) {
           const detail = describeMissingDiagram(document);
           console.error(

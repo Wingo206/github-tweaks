@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestRenderedSvg } from './bridge';
 import { MERMAID_ERROR_LOG_KEY, readMermaidViewerErrors } from './errors';
 import {
@@ -14,6 +14,7 @@ import {
   VIEWPORT_CLASS,
   WIRED_ATTRIBUTE,
   clearWiredMarkers,
+  findAllNativeDetails,
   findMermaidEmbeds,
   findNativeDetails,
   findOpenButton,
@@ -25,6 +26,7 @@ import {
   unmountOpenControl,
 } from './dom';
 import { MermaidFullscreenController } from './controller';
+import { readMermaidTrace } from './trace';
 
 vi.mock('./bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./bridge')>();
@@ -47,11 +49,19 @@ const svgHtmlLabelFixture = readFileSync(
   'utf8',
 );
 
+beforeEach(() => {
+  vi.spyOn(console, 'debug').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
 afterEach(() => {
   document.body.innerHTML = '';
   document.documentElement.className = '';
   clearWiredMarkers();
   localStorage.clear();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('mermaid DOM helpers', () => {
@@ -369,6 +379,179 @@ describe('MermaidFullscreenController', () => {
       detail: 'Expected a single <svg> element, received 1 starting with <p>.',
     });
     expect(localStorage.getItem(MERMAID_ERROR_LOG_KEY)).toBeTruthy();
+
+    controller.stop();
+  });
+
+  it('traces open, load, and render metrics', async () => {
+    document.body.innerHTML = fixture;
+    vi.mocked(requestRenderedSvg).mockResolvedValue({
+      ok: true,
+      svg: svgFixture,
+    });
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    findOpenButton(findMermaidEmbeds()[0]!)!.click();
+
+    await vi.waitFor(() => {
+      expect(readMermaidTrace().map((record) => record.event)).toContain(
+        'rendered',
+      );
+    });
+    const events = readMermaidTrace().map((record) => record.event);
+    expect(events).toEqual(['mounted', 'start', 'click', 'open', 'rendered']);
+    expect(readMermaidTrace()[2]?.data).toMatchObject({
+      onOurButton: true,
+      listening: true,
+      identity: 'fixture-mermaid-1',
+    });
+    expect(readMermaidTrace().at(-1)?.data).toMatchObject({
+      identity: 'fixture-mermaid-1',
+      viewBox: expect.any(String),
+      contentWidth: 2759.15625,
+      svgLength: svgFixture.length,
+    });
+
+    controller.stop();
+  });
+
+  it('warns when a wired embed has no listener, as after a page snapshot restore', () => {
+    document.body.innerHTML = fixture;
+    const embed = findMermaidEmbeds()[0]!;
+    mountOpenControl(embed);
+    markWired(embed);
+
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    findOpenButton(embed)!.click();
+
+    const warnings = readMermaidTrace().filter(
+      (record) => record.level === 'warn',
+    );
+    expect(warnings).toMatchObject([
+      {
+        event: 'wired-without-listener',
+        data: { identity: 'fixture-mermaid-1', hasOpenButton: true },
+      },
+      {
+        event: 'click',
+        data: { onOurButton: true, listening: false },
+      },
+    ]);
+
+    controller.stop();
+  });
+
+  it('warns when an embed never gets an actions row', () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = fixture;
+    document.querySelector('.js-render-block-actions')!.remove();
+
+    const controller = new MermaidFullscreenController();
+    controller.start();
+    vi.advanceTimersByTime(3000);
+
+    const stuck = readMermaidTrace().find(
+      (record) => record.event === 'mount-stuck',
+    );
+    expect(stuck).toMatchObject({
+      level: 'warn',
+      data: { hasActionsRow: false, hasNativeDetails: false },
+    });
+    expect(stuck?.data?.outline).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^section\.js-render-needs-enrichment/),
+        expect.stringMatching(/^\s+div\.js-render-enrichment-target$/),
+      ]),
+    );
+
+    controller.stop();
+  });
+
+  it('re-hides a native control GitHub rebuilds next to our button', () => {
+    document.body.innerHTML = fixture;
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    const embed = findMermaidEmbeds()[0]!;
+    const button = findOpenButton(embed)!;
+    const rebuilt = findNativeDetails(embed)!.cloneNode(true) as HTMLDetailsElement;
+    rebuilt.removeAttribute(NATIVE_HIDDEN_ATTRIBUTE);
+    rebuilt.hidden = false;
+    findNativeDetails(embed)!.replaceWith(rebuilt);
+    controller['scan']();
+
+    expect(rebuilt.hasAttribute(NATIVE_HIDDEN_ATTRIBUTE)).toBe(true);
+    expect(findOpenButton(embed)).toBe(button);
+    expect(
+      readMermaidTrace().find(
+        (record) => record.event === 'native-control-reshown',
+      ),
+    ).toMatchObject({
+      level: 'warn',
+      data: { visibleNativeControls: 1, reshown: 1, moved: false },
+    });
+
+    controller.stop();
+  });
+
+  it('moves our working button into a toolbar GitHub rebuilt', async () => {
+    document.body.innerHTML = fixture;
+    vi.mocked(requestRenderedSvg).mockResolvedValue({
+      ok: true,
+      svg: svgFixture,
+    });
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    const embed = findMermaidEmbeds()[0]!;
+    const button = findOpenButton(embed)!;
+    const template = document.createElement('template');
+    template.innerHTML = fixture;
+    const freshRow = template.content.querySelector<HTMLElement>(
+      '.js-render-block-actions',
+    )!;
+    embed.querySelector('.js-render-enrichment-target')!.prepend(freshRow);
+    controller['scan']();
+
+    expect(button.parentElement).toBe(freshRow);
+    expect(
+      freshRow.querySelector('details')!.hasAttribute(NATIVE_HIDDEN_ATTRIBUTE),
+    ).toBe(true);
+    expect(
+      readMermaidTrace().find(
+        (record) => record.event === 'native-control-reshown',
+      )?.data,
+    ).toMatchObject({ actionsRows: 2, reshown: 1, moved: true });
+
+    button.click();
+    await vi.waitFor(() => {
+      expect(document.querySelector(`.${VIEWPORT_CLASS} svg`)).toBeTruthy();
+    });
+
+    controller.stop();
+    expect(
+      findAllNativeDetails(embed).every((details) => !details.hidden),
+    ).toBe(true);
+  });
+
+  it('only notes, without warning, when GitHub failed to render the diagram', () => {
+    document.body.innerHTML = fixture;
+    const controller = new MermaidFullscreenController();
+    controller.start();
+
+    const embed = findMermaidEmbeds()[0]!;
+    embed.classList.add('render-error');
+    findOpenButton(embed)!.remove();
+    controller['scan']();
+
+    expect(
+      readMermaidTrace().find(
+        (record) => record.event === 'open-button-removed',
+      ),
+    ).toMatchObject({ level: 'debug', data: { renderError: true } });
 
     controller.stop();
   });
