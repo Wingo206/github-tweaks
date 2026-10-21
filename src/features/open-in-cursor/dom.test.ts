@@ -43,7 +43,7 @@ async function flush(): Promise<void> {
 }
 
 describe('file header', () => {
-  it('mounts one button before Viewed and opens the first added line', async () => {
+  it('mounts one button after Copy file name and opens the first added line', async () => {
     renderFileSection();
     const open = opener();
     syncFileHeaders(document, ref, open);
@@ -52,7 +52,9 @@ describe('file header', () => {
     const [button] = controls('file-header');
     expect(controls('file-header')).toHaveLength(1);
     expect(button!.getAttribute('aria-label')).toBe(ACCESSIBLE_NAME);
-    expect(button!.nextElementSibling?.getAttribute('aria-label')).toBe('Not Viewed');
+    expect(button!.previousElementSibling?.getAttribute('aria-label')).toBe(
+      'Copy file name to clipboard',
+    );
 
     button!.click();
     expect(open).toHaveBeenCalledWith({

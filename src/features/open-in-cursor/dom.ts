@@ -271,12 +271,13 @@ export function firstChangedLine(section: Element): number {
   return Number.isInteger(line) && line >= 1 ? line : 1;
 }
 
-function findViewedButton(header: Element): HTMLButtonElement | null {
-  return (
-    Array.from(header.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')).find((button) =>
-      button.textContent?.includes('Viewed'),
-    ) ?? null
-  );
+/** The copy-file-name button's tooltip, or the button itself if it has none. */
+function findCopyFileNameAnchor(header: Element): Element | null {
+  const tooltip = header.querySelector('[data-component="Tooltip"][aria-label="Copy file name to clipboard"]');
+  if (tooltip) {
+    return tooltip;
+  }
+  return header.querySelector('button[aria-label="Copy file name to clipboard"]');
 }
 
 export function syncFileHeaders(root: ParentNode, ref: PullRequestRef, open: Opener): void {
@@ -296,8 +297,7 @@ export function syncFileHeaders(root: ParentNode, ref: PullRequestRef, open: Ope
     if (existing) {
       continue;
     }
-    const viewed = findViewedButton(header);
-    const container = viewed?.parentElement ?? header.firstElementChild ?? header;
+    const anchor = findCopyFileNameAnchor(header) ?? header.querySelector('h3');
     const button = createIconButton('file-header', 'invisible');
     bindButton(
       button,
@@ -309,10 +309,10 @@ export function syncFileHeaders(root: ParentNode, ref: PullRequestRef, open: Ope
       },
       open,
     );
-    if (viewed) {
-      viewed.before(button);
+    if (anchor) {
+      anchor.after(button);
     } else {
-      container.append(button);
+      (header.firstElementChild ?? header).append(button);
     }
   }
 }

@@ -402,7 +402,7 @@ token in Cursor", "Companion offline: open a Cursor window", or
 | Surface | Mount | Target |
 |---|---|---|
 | Diff line | Menu item in the line's "More actions" menu | `pr-line` |
-| File header | Icon button before the Viewed control in `[data-diff-header-wrapper]` | `pr-line` |
+| File header | Icon button after the "Copy file name to clipboard" button in `[data-diff-header-wrapper]` | `pr-line` |
 | Review thread, changes tab | Icon in the thread heading row (beside "Comment on lines R107 to R108") | `pr-comment` with DOM fallback |
 | Review thread, conversation tab | Icon in the `review-thread-collapsible` header row, after the path link | `pr-comment`, no fallback |
 | Blob toolbar | Button group item after the Raw / Copy / Download group (`[data-testid="raw-button"]`) | `blob` |
@@ -452,7 +452,7 @@ per `DEVELOPMENT.md`:
 
 - `diff-line.html` — one right-side cell with its action bar
 - `diff-line-menu.html` — the line "More actions" menu
-- `diff-file-header.html` — file header with path, diffstat, Viewed
+- `diff-file-header.html` — file header with path, copy file name, diffstat, Viewed
 - `changes-review-thread.html` — inline thread with heading and comment id
 - `conversation-review-threads.html` — one expanded and one collapsed resolved
   thread
