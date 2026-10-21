@@ -24,26 +24,33 @@ async function nextFrame(): Promise<void> {
 }
 
 describe('OpenInCursorController', () => {
-  it('injects the diff menu item for the clicked line and cleans up on stop', async () => {
+  it('follows the Add comment button as GitHub moves it between lines and cleans up on stop', async () => {
     document.body.innerHTML = fixture('diff-file-header.html');
-    document.querySelector('tbody')!.innerHTML = fixture('diff-line.html');
+    const tbody = document.querySelector('tbody')!;
     const open = vi.fn(async (_target: OpenTarget): Promise<OpenResult> => ({ status: 'opened' }));
     controller = new OpenInCursorController({ kind: 'pull', ref }, open);
     controller.start();
-    expect(document.querySelectorAll(`[${MARKER}="file-header"]`)).toHaveLength(1);
+    expect(document.querySelectorAll(`[${MARKER}="diff-line"]`)).toHaveLength(0);
 
-    document
-      .querySelector<HTMLButtonElement>('td[data-line-number="32"] button[aria-label="More actions"]')!
-      .click();
-    document.body.insertAdjacentHTML('beforeend', fixture('diff-line-menu.html'));
+    tbody.innerHTML = fixture('diff-line.html');
     await nextFrame();
-    expect(document.querySelectorAll(`[${MARKER}="diff-line-menu"]`)).toHaveLength(1);
+    expect(document.querySelectorAll(`[${MARKER}="file-header"]`)).toHaveLength(1);
+    expect(document.querySelectorAll(`[${MARKER}="diff-line"]`)).toHaveLength(1);
+
+    const addComment = document.querySelector('[data-add-comment-button]')!.parentElement!;
+    document.querySelector('td.diff-text-cell[data-line-number="29"][data-diff-side="right"]')!.append(addComment);
+    await nextFrame();
+    const buttons = document.querySelectorAll<HTMLButtonElement>(`[${MARKER}="diff-line"]`);
+    expect(buttons).toHaveLength(1);
+    buttons[0]!.click();
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ line: 29 }));
+    await nextFrame();
 
     controller.stop();
     controller = null;
     expect(document.querySelector(`[${MARKER}]`)).toBeNull();
 
-    document.querySelector('[role="menu"]')!.append(document.createElement('li'));
+    tbody.append(document.createElement('tr'));
     await nextFrame();
     expect(document.querySelector(`[${MARKER}]`)).toBeNull();
   });

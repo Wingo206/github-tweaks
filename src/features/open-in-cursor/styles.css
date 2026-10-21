@@ -2,6 +2,13 @@
   flex-shrink: 0;
 }
 
+.ght-oic-button.ght-oic-line-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  margin-left: 4px;
+}
+
 .ght-oic-button[data-ght-oic-state="opened"] {
   color: var(--fgColor-success, #1a7f37);
 }

@@ -3,7 +3,6 @@ import {
   parseBlobLocation,
   parseCommentElementId,
   parseLineHash,
-  parseMenuLineLabel,
   parseRoute,
   parseThreadHeadingLine,
   readEmbeddedBlobInfo,
@@ -107,12 +106,6 @@ describe('readEmbeddedBlobInfo', () => {
 });
 
 describe('label parsing', () => {
-  it('parses diff menu labels', () => {
-    expect(parseMenuLineLabel('Add comment on line R32')).toEqual({ side: 'right', line: 32 });
-    expect(parseMenuLineLabel('Add comment on line L7')).toEqual({ side: 'left', line: 7 });
-    expect(parseMenuLineLabel('Suggest change on line R32')).toBeNull();
-  });
-
   it('parses thread headings', () => {
     expect(parseThreadHeadingLine('Comment on lines R107 to R108')).toBe(108);
     expect(parseThreadHeadingLine('Comment on line L4')).toBe(4);

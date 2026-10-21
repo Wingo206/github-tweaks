@@ -60,8 +60,8 @@ the list. Pins are for people.
 Opens the file and line behind a GitHub view in your local Cursor window,
 inside the matching clone, and brings that window to the front. Buttons appear:
 
-- in each diff line's **More actions** menu and in each file header (before
-  **Viewed**) on the Files changed tab
+- beside the blue **+** (add comment) button when you hover a diff line, and in
+  each file header (before **Viewed**), on the Files changed tab
 - in each review thread heading on the Files changed and Conversation tabs
 - in a file page's toolbar (after Raw / Copy / Download) and its highlighted
   line menu

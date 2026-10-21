@@ -134,17 +134,6 @@ export function readEmbeddedBlobInfo(value: unknown): EmbeddedBlobInfo | null {
   };
 }
 
-/** "Add comment on line R32" → { side: 'right', line: 32 }. */
-export function parseMenuLineLabel(
-  text: string,
-): { side: 'left' | 'right'; line: number } | null {
-  const match = text.trim().match(/^Add comment on line ([LR])(\d+)$/);
-  if (!match?.[1] || !match[2]) {
-    return null;
-  }
-  return { side: match[1] === 'L' ? 'left' : 'right', line: Number(match[2]) };
-}
-
 /** "Comment on lines R107 to R108" → 108; "Comment on line L4" → 4. */
 export function parseThreadHeadingLine(text: string): number | null {
   const matches = [...text.matchAll(/\b[LR](\d+)\b/g)];

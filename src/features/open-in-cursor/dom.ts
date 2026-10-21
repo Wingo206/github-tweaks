@@ -3,7 +3,6 @@ import {
   describeFailure,
   parseBlobLocation,
   parseCommentElementId,
-  parseMenuLineLabel,
   parseThreadHeadingLine,
   readEmbeddedBlobInfo,
   type EmbeddedBlobInfo,
@@ -15,12 +14,6 @@ export const ACCESSIBLE_NAME = 'Open in Cursor';
 export type Opener = (target: OpenTarget) => Promise<OpenResult>;
 export type ControlState = 'idle' | 'working' | 'opened' | 'failed';
 
-export interface RecordedDiffCell {
-  side: 'left' | 'right';
-  line: number;
-  path: string;
-}
-
 const OPENED_MS = 1_500;
 const FAILED_MS = 5_000;
 
@@ -28,6 +21,8 @@ const FILE_SECTION_SELECTOR = '[role="region"][id^="diff-"]';
 const HEADER_SELECTOR = '[data-diff-header-wrapper="true"]';
 const LINE_CELL_SELECTOR = 'td[data-line-number][data-diff-side]';
 const RIGHT_CELL_SELECTOR = 'td[data-diff-side="right"][data-line-number]';
+const ADD_COMMENT_SELECTOR = 'button[data-add-comment-button="true"]';
+const ADD_COMMENT_ACCENT_CLASS = /^(bgColor|borderColor)-accent-|^fgColor-onEmphasis$|^addCommentButton/;
 
 const OPEN_ICON =
   '<svg aria-hidden="true" focusable="false" class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"></path></svg>';
@@ -190,6 +185,20 @@ function createMenuItem(menu: HTMLElement, surface: string): HTMLLIElement {
   return item;
 }
 
+function openWithToast(target: OpenTarget | null, open: Opener): void {
+  if (!target) {
+    return;
+  }
+  showToast('Opening in Cursor…', 'working');
+  void runOpen(open, target).then((result) => {
+    if (result.status === 'opened') {
+      showToast('Opened in Cursor', 'opened');
+    } else {
+      showToast(describeFailure(result), 'failed');
+    }
+  });
+}
+
 function bindMenuItem(
   item: HTMLElement,
   menu: HTMLElement,
@@ -201,17 +210,7 @@ function bindMenuItem(
     event.stopPropagation();
     const target = getTarget();
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    if (!target) {
-      return;
-    }
-    showToast('Opening in Cursor…', 'working');
-    void runOpen(open, target).then((result) => {
-      if (result.status === 'opened') {
-        showToast('Opened in Cursor', 'opened');
-      } else {
-        showToast(describeFailure(result), 'failed');
-      }
-    });
+    openWithToast(target, open);
   };
   item.addEventListener('click', activate);
   item.addEventListener('keydown', (event) => {
@@ -317,55 +316,49 @@ export function syncFileHeaders(root: ParentNode, ref: PullRequestRef, open: Ope
   }
 }
 
-/** Reads the line cell whose "More actions" button was clicked, if any. */
-export function recordDiffCell(target: EventTarget | null): RecordedDiffCell | null | undefined {
-  if (!(target instanceof Element)) {
-    return undefined;
+/**
+ * Mirrors GitHub's "Add comment" button without its blue accent. Class names
+ * are copied from the live button at runtime rather than hard-coded.
+ */
+function createLineButton(addComment: HTMLElement): HTMLButtonElement {
+  const button = createIconButton('diff-line', 'invisible');
+  const classes = Array.from(addComment.classList).filter(
+    (name) => !ADD_COMMENT_ACCENT_CLASS.test(name),
+  );
+  if (classes.some((name) => name.startsWith('prc-Button-'))) {
+    button.className = [...classes, 'ght-oic-button', 'ght-oic-line-button'].join(' ');
+    button.dataset.size = 'small';
+    button.dataset.variant = 'default';
+    button.dataset.noVisuals = 'true';
+  } else {
+    button.classList.add('ght-oic-line-button');
   }
-  const button = target.closest('button[aria-label="More actions"][aria-haspopup="true"]');
-  if (!button) {
-    return undefined;
-  }
-  const cell = button.closest<HTMLElement>(LINE_CELL_SELECTOR);
-  const side = cell?.dataset.diffSide;
-  const line = Number(cell?.dataset.lineNumber);
-  const path = cell ? filePathForElement(cell) : null;
-  if (!cell || (side !== 'left' && side !== 'right') || !Number.isInteger(line) || !path) {
-    return null;
-  }
-  return { side, line, path };
+  return button;
 }
 
-export function syncDiffLineMenu(
-  menu: HTMLElement,
-  cell: RecordedDiffCell | null,
-  ref: PullRequestRef,
-  open: Opener,
-): void {
-  const label = Array.from(menu.querySelectorAll('[data-component="ActionList.Item.Label"]'))
-    .map((element) => parseMenuLineLabel(element.textContent ?? ''))
-    .find((parsed) => parsed !== null);
-  const existing = menu.querySelector<HTMLElement>(`[${MARKER}="diff-line-menu"]`);
-  const key = cell ? `${cell.path}:${cell.side}:${cell.line}` : '';
-  const matches = !!label && !!cell && label.side === cell.side && label.line === cell.line;
-  if (existing) {
-    if (matches && existing.dataset.ghtOicKey === key) {
-      return;
+function lineTargetFor(element: Element, ref: PullRequestRef): OpenTarget | null {
+  const cell = element.closest<HTMLElement>(LINE_CELL_SELECTOR);
+  const line = Number(cell?.dataset.lineNumber);
+  const path = cell ? filePathForElement(cell) : null;
+  return path && Number.isInteger(line) && line >= 1 ? { kind: 'pr-line', ...ref, path, line } : null;
+}
+
+/** GitHub renders the "Add comment" button only for the hovered or focused line. */
+export function syncDiffLineButtons(root: ParentNode, ref: PullRequestRef, open: Opener): void {
+  for (const addComment of root.querySelectorAll<HTMLElement>(ADD_COMMENT_SELECTOR)) {
+    const next = addComment.nextElementSibling;
+    if (!addComment.closest(LINE_CELL_SELECTOR) || next?.getAttribute(MARKER) === 'diff-line') {
+      continue;
     }
-    existing.remove();
+    const button = createLineButton(addComment);
+    button.addEventListener('mousedown', (event) => event.stopPropagation());
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openWithToast(lineTargetFor(button, ref), open);
+    });
+    addComment.after(button);
   }
-  if (!matches || !cell) {
-    return;
-  }
-  const item = createMenuItem(menu, 'diff-line-menu');
-  item.dataset.ghtOicKey = key;
-  bindMenuItem(
-    item,
-    menu,
-    () => ({ kind: 'pr-line', ...ref, path: cell.path, line: cell.line }),
-    open,
-  );
-  insertMenuItemAfter(menu, item, 'Copy link');
 }
 
 // ---------------------------------------------------------------------------

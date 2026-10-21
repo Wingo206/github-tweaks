@@ -401,7 +401,7 @@ token in Cursor", "Companion offline: open a Cursor window", or
 
 | Surface | Mount | Target |
 |---|---|---|
-| Diff line | Menu item in the line's "More actions" menu | `pr-line` |
+| Diff line | Icon button after the line's blue "Add comment" (+) button | `pr-line` |
 | File header | Icon button after the "Copy file name to clipboard" button in `[data-diff-header-wrapper]` | `pr-line` |
 | Review thread, changes tab | Icon in the thread heading row (beside "Comment on lines R107 to R108") | `pr-comment` with DOM fallback |
 | Review thread, conversation tab | Icon in the `review-thread-collapsible` header row, after the path link | `pr-comment`, no fallback |
@@ -410,15 +410,15 @@ token in Cursor", "Companion offline: open a Cursor window", or
 
 Rules per surface:
 
-- **Diff line menu.** The menu is a portal with no reliable link back to its
-  line. A capture-phase `click` listener records the line cell
-  (`td[data-line-number][data-diff-side]`) whose
-  `button[aria-label="More actions"][aria-haspopup="true"]` was clicked. When
-  a `[role="menu"]` appears containing an item labeled
-  `Add comment on line <L|R><n>`, inject only if `<L|R><n>` matches the
-  recorded cell's side and `data-line-number`. Path comes from the enclosing
-  file section (`[role="region"][id^="diff-"]`): its header's
-  `[data-file-path]` button. Either side opens that line number.
+- **Diff line button.** GitHub renders
+  `button[data-add-comment-button="true"]` only for the hovered or focused
+  line cell (`td[data-line-number][data-diff-side]`). The observer mounts an
+  icon button right after it, copying its Primer classes minus the blue accent
+  ones. On click, the line comes from the enclosing cell's `data-line-number`
+  and the path from the enclosing file section
+  (`[role="region"][id^="diff-"]`): its header's `[data-file-path]` button.
+  Either side opens that line number. The button unmounts with the "+" when
+  the pointer leaves the line, so feedback uses the toast.
 - **File header.** Line = first `td[data-diff-side="right"]` in that file whose
   `code` has class `addition`; else first `td[data-diff-side="right"]`; else
   1. If the file has rendered cells but none on the right side (deleted file),
@@ -451,7 +451,6 @@ Cut from the captured dumps into `tests/fixtures/open-in-cursor/`, sanitized
 per `DEVELOPMENT.md`:
 
 - `diff-line.html` — one right-side cell with its action bar
-- `diff-line-menu.html` — the line "More actions" menu
 - `diff-file-header.html` — file header with path, copy file name, diffstat, Viewed
 - `changes-review-thread.html` — inline thread with heading and comment id
 - `conversation-review-threads.html` — one expanded and one collapsed resolved

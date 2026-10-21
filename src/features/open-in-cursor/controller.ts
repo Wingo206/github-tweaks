@@ -2,15 +2,13 @@ import { sendBackgroundMessage } from '../../shared/messaging';
 import type { OpenResult } from '../../shared/types';
 import {
   clearOpenInCursorUi,
-  recordDiffCell,
   syncBlobLineMenu,
   syncBlobToolbar,
   syncChangesThreads,
   syncConversationThreads,
-  syncDiffLineMenu,
+  syncDiffLineButtons,
   syncFileHeaders,
   type Opener,
-  type RecordedDiffCell,
 } from './dom';
 import type { OpenInCursorRoute } from './model';
 
@@ -19,7 +17,6 @@ const defaultOpener: Opener = (target) =>
 
 export class OpenInCursorController {
   private observer: MutationObserver | null = null;
-  private recordedCell: RecordedDiffCell | null = null;
   private syncQueued = false;
   private stopped = true;
 
@@ -30,16 +27,13 @@ export class OpenInCursorController {
 
   start(): void {
     this.stopped = false;
-    document.addEventListener('click', this.onClickCapture, true);
     this.sync();
   }
 
   stop(): void {
     this.stopped = true;
-    document.removeEventListener('click', this.onClickCapture, true);
     this.observer?.disconnect();
     this.observer = null;
-    this.recordedCell = null;
     clearOpenInCursorUi();
   }
 
@@ -51,11 +45,9 @@ export class OpenInCursorController {
     const route = this.route;
     if (route.kind === 'pull') {
       syncFileHeaders(document, route.ref, this.open);
+      syncDiffLineButtons(document, route.ref, this.open);
       syncChangesThreads(document, route.ref, this.open);
       syncConversationThreads(document, route.ref, this.open);
-      for (const menu of document.querySelectorAll<HTMLElement>('[role="menu"]')) {
-        syncDiffLineMenu(menu, this.recordedCell, route.ref, this.open);
-      }
     } else {
       syncBlobToolbar(document, this.open);
       for (const menu of document.querySelectorAll<HTMLElement>(
@@ -66,13 +58,6 @@ export class OpenInCursorController {
     }
     this.observe();
   }
-
-  private readonly onClickCapture = (event: MouseEvent): void => {
-    const recorded = recordDiffCell(event.target);
-    if (recorded !== undefined) {
-      this.recordedCell = recorded;
-    }
-  };
 
   private observe(): void {
     if (this.stopped || !document.body) {
