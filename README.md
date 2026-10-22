@@ -26,6 +26,15 @@ On a pull request's changed-files page, GitHub Tweaks adds:
 The feature supports GitHub's `/pull/:number/changes` and legacy
 `/pull/:number/files` routes on `github.com`.
 
+### File tree scroll position
+
+On the same changed-files page, a blue band in the file tree covers the row of
+every file currently on screen in the diff, below the sticky toolbar. A file
+inside a collapsed folder lights up that folder instead. The tree scrolls to
+keep the band in view, except while the pointer is over the tree. The band is
+display only, and it replaces GitHub's own current-file highlight, which
+follows the URL rather than scrolling.
+
 ### Mermaid fullscreen viewer
 
 Anywhere GitHub renders a Mermaid diagram, GitHub Tweaks replaces the native

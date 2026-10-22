@@ -1,5 +1,6 @@
 export type FeatureId =
   | 'pr-sidebar-metadata'
+  | 'pr-file-tree-viewport'
   | 'mermaid-fullscreen'
   | 'pr-handback-assignee'
   | 'pr-people-pins'
@@ -20,6 +21,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'pr-sidebar-metadata',
     title: 'Pull request sidebar metadata',
     description: 'Line counts, Viewed state, and progress in the changed-files tree.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-file-tree-viewport',
+    title: 'File tree scroll position',
+    description: 'Highlights the files on screen in the changed-files tree.',
     defaultEnabled: true,
   },
   {

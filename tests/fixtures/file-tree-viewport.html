@@ -1,0 +1,96 @@
+<section class="stickyHeader__abc123 toolbar__def456 is-stuck__ghi789">
+  <h2 class="sr-only">Pull request toolbar</h2>
+</section>
+
+<div id="pr-file-tree">
+  <div id="diff-file-tree-filter">
+    <input aria-label="Filter files…">
+  </div>
+  <div class="FileTreeScrollable__abc123" style="overflow-y: auto">
+    <h2 class="sr-only">File tree</h2>
+    <ul role="tree" aria-label="File Tree">
+      <li id="src" role="treeitem" aria-level="1" aria-expanded="true">
+        <div class="PRIVATE_TreeView-item-container" style="--level: 1;">
+          <div class="PRIVATE_TreeView-item-content">
+            <span class="PRIVATE_TreeView-item-content-text"><span>src</span></span>
+          </div>
+        </div>
+        <ul role="group" aria-label="src">
+          <li id="src/utils" role="treeitem" aria-level="2" aria-expanded="false">
+            <div class="PRIVATE_TreeView-item-container" style="--level: 2;">
+              <div class="PRIVATE_TreeView-item-content">
+                <span class="PRIVATE_TreeView-item-content-text"><span>utils</span></span>
+              </div>
+            </div>
+          </li>
+          <li id="src/app.ts" role="treeitem" aria-level="2" aria-label="app.ts">
+            <div class="PRIVATE_TreeView-item-container" style="--level: 2;">
+              <div class="PRIVATE_TreeView-item-content">
+                <span class="PRIVATE_TreeView-item-content-text">
+                  <a href="#diff-app" role="presentation" tabindex="-1">app.ts</a>
+                </span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li id="README.md" role="treeitem" aria-level="1" aria-label="README.md">
+        <div class="PRIVATE_TreeView-item-container" style="--level: 1;">
+          <div class="PRIVATE_TreeView-item-content">
+            <span class="PRIVATE_TreeView-item-content-text">
+              <a href="#diff-readme" role="presentation" tabindex="-1">README.md</a>
+            </span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div data-testid="progressive-diffs-list">
+  <div style="content-visibility: auto; contain-intrinsic-size: auto 42px;">
+    <div role="region" id="diff-format" aria-labelledby="heading-format" data-estimated-height="42">
+      <div data-diff-header-wrapper="true">
+        <div>
+          <h3 id="heading-format">
+            <a href="#diff-format"><code>&lrm;src/utils/format.ts&lrm;</code></a>
+          </h3>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="content-visibility: auto; contain-intrinsic-size: auto 1800px;">
+    <div role="region" id="diff-app" aria-labelledby="heading-app" data-estimated-height="1800">
+      <div data-diff-header-wrapper="true">
+        <div>
+          <h3 id="heading-app">
+            <a href="#diff-app"><code>&lrm;src/app.ts&lrm;</code></a>
+          </h3>
+          <button data-file-path="src/app.ts" type="button">Expand all lines</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="content-visibility: auto; contain-intrinsic-size: auto 2500px;">
+    <div role="region" id="diff-readme">
+      <div data-diff-header-wrapper="true">
+        <div>
+          <h3>
+            <a href="#diff-readme"><code>&lrm;README.md&lrm;</code></a>
+          </h3>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="content-visibility: auto; contain-intrinsic-size: auto 400px;">
+    <div role="region" id="diff-filtered">
+      <div data-diff-header-wrapper="true">
+        <div>
+          <h3>
+            <a href="#diff-filtered"><code>&lrm;docs/guide.md&lrm;</code></a>
+          </h3>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

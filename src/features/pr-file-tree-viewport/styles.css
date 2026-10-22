@@ -1,0 +1,45 @@
+.ght-tv-host {
+  position: relative;
+}
+
+#pr-file-tree
+  li[role='treeitem'][aria-current='true']
+  > .PRIVATE_TreeView-item-container {
+  background-color: transparent;
+}
+
+#pr-file-tree
+  li[role='treeitem'][aria-current='true']
+  > .PRIVATE_TreeView-item-container:hover {
+  background-color: var(--control-transparent-bgColor-hover, #818b981a);
+}
+
+#pr-file-tree
+  li[role='treeitem'][aria-current='true']
+  > .PRIVATE_TreeView-item-container::after {
+  content: none;
+}
+
+.ght-tv-band {
+  background: color-mix(
+    in srgb,
+    var(--bgColor-accent-emphasis, #0969da) 10%,
+    transparent
+  );
+  border-radius: 6px;
+  box-shadow: inset 3px 0 0 var(--borderColor-accent-emphasis, #0969da);
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  transition:
+    top 80ms ease-out,
+    height 80ms ease-out;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ght-tv-band {
+    transition: none;
+  }
+}
