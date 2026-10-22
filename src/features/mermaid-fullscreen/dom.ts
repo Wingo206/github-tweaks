@@ -10,6 +10,7 @@ import {
   wheelZoomFactor,
   zoomAt,
 } from './model';
+import { MERMAID_OPEN_CLASS } from '../../shared/pageSignals';
 
 export const EMBED_SELECTOR =
   'section.js-render-needs-enrichment[data-type="mermaid"]';
@@ -21,7 +22,7 @@ export const NATIVE_HIDDEN_ATTRIBUTE = 'data-ght-mermaid-native-hidden';
 export const NATIVE_FALLBACK_ATTRIBUTE = 'data-ght-mermaid-native-fallback';
 export const MODAL_ATTRIBUTE = 'data-ght-mermaid-modal';
 export const RENDER_ERROR_CLASS = 'render-error';
-export const OPEN_CLASS = 'ght-mermaid-open';
+export const OPEN_CLASS = MERMAID_OPEN_CLASS;
 export const VIEWPORT_CLASS = 'ght-mermaid-viewport';
 export const STAGE_CLASS = 'ght-mermaid-stage';
 export const SVG_CLASS = 'ght-mermaid-svg';

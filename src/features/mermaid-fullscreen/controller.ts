@@ -79,7 +79,7 @@ export class MermaidFullscreenController {
     }
     this.onClickByEmbed.clear();
     clearWiredMarkers();
-    document.documentElement.classList.remove('ght-mermaid-open');
+    document.documentElement.classList.remove(OPEN_CLASS);
   }
 
   /** Records what a click near a diagram actually hit, before any handler runs. */
