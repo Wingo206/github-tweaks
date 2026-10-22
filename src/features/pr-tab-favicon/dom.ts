@@ -1,19 +1,28 @@
-import { PR_TABS, prefixTitle, renderFavicon, type PrTab } from './model';
+import { MERMAID_OPEN_CLASS } from '../../shared/pageSignals';
+import {
+  FAVICON_MODES,
+  prefixTitle,
+  renderFavicon,
+  type FaviconMode,
+  type PrTab,
+} from './model';
 
 export const ORIGINAL_HREF = 'data-ght-favicon-href';
 export const ORIGINAL_TYPE = 'data-ght-favicon-type';
 
 const ICON_LINKS = 'link[rel~="icon"]';
-const OWN_HREFS = new Set(PR_TABS.map(renderFavicon));
+const OWN_HREFS = new Set(FAVICON_MODES.map(renderFavicon));
 
 /**
- * Keeps the tab favicon and title marked for one PR tab. GitHub rewrites the
+ * Keeps the tab favicon and title marked for one PR tab, or for a diagram
+ * while the Mermaid fullscreen viewer is open over it. GitHub rewrites the
  * favicon for CI status and the title on navigation, so both are re-applied
  * whenever `<head>` changes, and GitHub's latest values are what `stop`
  * restores.
  */
 export class PrTabMarker {
-  private observer: MutationObserver | null = null;
+  private headObserver: MutationObserver | null = null;
+  private rootObserver: MutationObserver | null = null;
   private baseTitle = '';
   private appliedTitle: string | null = null;
 
@@ -24,13 +33,18 @@ export class PrTabMarker {
 
   start(): void {
     this.sync();
-    this.observer = new MutationObserver(() => this.sync());
-    this.observer.observe(this.doc.head, {
+    this.headObserver = new MutationObserver(() => this.sync());
+    this.headObserver.observe(this.doc.head, {
       subtree: true,
       childList: true,
       characterData: true,
       attributes: true,
       attributeFilter: ['href'],
+    });
+    this.rootObserver = new MutationObserver(() => this.sync());
+    this.rootObserver.observe(this.doc.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
     });
   }
 
@@ -42,8 +56,10 @@ export class PrTabMarker {
   }
 
   stop(): void {
-    this.observer?.disconnect();
-    this.observer = null;
+    this.headObserver?.disconnect();
+    this.headObserver = null;
+    this.rootObserver?.disconnect();
+    this.rootObserver = null;
 
     for (const link of this.doc.head.querySelectorAll<HTMLLinkElement>(ICON_LINKS)) {
       const href = link.getAttribute(ORIGINAL_HREF);
@@ -62,8 +78,13 @@ export class PrTabMarker {
     this.appliedTitle = null;
   }
 
+  private mode(): FaviconMode {
+    return this.doc.documentElement.classList.contains(MERMAID_OPEN_CLASS) ? 'diagram' : this.tab;
+  }
+
   private sync(): void {
-    const href = renderFavicon(this.tab);
+    const mode = this.mode();
+    const href = renderFavicon(mode);
     for (const link of this.doc.head.querySelectorAll<HTMLLinkElement>(ICON_LINKS)) {
       const current = link.getAttribute('href') ?? '';
       if (current === href) {
@@ -83,7 +104,7 @@ export class PrTabMarker {
     if (title !== this.appliedTitle) {
       this.baseTitle = title;
     }
-    this.appliedTitle = prefixTitle(this.baseTitle, this.tab);
+    this.appliedTitle = prefixTitle(this.baseTitle, mode);
     if (title !== this.appliedTitle) {
       this.doc.title = this.appliedTitle;
     }

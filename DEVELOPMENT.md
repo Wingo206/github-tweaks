@@ -121,6 +121,13 @@ Register future features in `entrypoints/github.content.ts`. Keep state and DOM
 logic inside the feature directory. Request new manifest permissions only when
 the feature cannot work without them.
 
+Features do not import each other. When one feature needs another's page
+state, the owner publishes it on the DOM and the reader observes it. Shared
+names live in `src/shared/pageSignals.ts`; for example, Mermaid fullscreen
+sets `MERMAID_OPEN_CLASS` on `<html>` while its viewer is open, and pull
+request tab icons switch to the diagram badge while it is there. Either
+feature keeps working when the other is turned off.
+
 ### Background messages
 
 Cross-context operations are discriminated unions in `src/shared/types.ts`.

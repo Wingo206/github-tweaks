@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PR_TABS, parsePrTab, prefixTitle, renderFavicon } from './model';
+import { FAVICON_MODES, parsePrTab, prefixTitle, renderFavicon } from './model';
 
 describe('parsePrTab', () => {
   it.each([
@@ -31,9 +31,9 @@ describe('parsePrTab', () => {
 });
 
 describe('renderFavicon', () => {
-  it('renders the Octocat with a distinct corner badge per tab', () => {
-    const hrefs = PR_TABS.map(renderFavicon);
-    expect(new Set(hrefs).size).toBe(PR_TABS.length);
+  it('renders the Octocat with a distinct corner badge per tab and for diagrams', () => {
+    const hrefs = FAVICON_MODES.map(renderFavicon);
+    expect(new Set(hrefs).size).toBe(FAVICON_MODES.length);
     for (const href of hrefs) {
       expect(href.startsWith('data:image/svg+xml,')).toBe(true);
       const svg = decodeURIComponent(href);
@@ -43,12 +43,12 @@ describe('renderFavicon', () => {
     }
   });
 
-  it('colors each tab’s badge differently', () => {
-    const badgeFills = PR_TABS.map(
-      (tab) => decodeURIComponent(renderFavicon(tab)).match(/\.badge\{fill:(#[0-9a-f]{6})\}/)?.[1],
+  it('colors each badge differently', () => {
+    const badgeFills = FAVICON_MODES.map(
+      (mode) => decodeURIComponent(renderFavicon(mode)).match(/\.badge\{fill:(#[0-9a-f]{6})\}/)?.[1],
     );
     expect(badgeFills.every(Boolean)).toBe(true);
-    expect(new Set(badgeFills).size).toBe(PR_TABS.length);
+    expect(new Set(badgeFills).size).toBe(FAVICON_MODES.length);
   });
 });
 
@@ -56,5 +56,6 @@ describe('prefixTitle', () => {
   it('prefixes the tab label', () => {
     expect(prefixTitle('Fix it · Pull Request #42', 'files')).toBe('Files · Fix it · Pull Request #42');
     expect(prefixTitle('Fix it', 'conversation')).toBe('Conversation · Fix it');
+    expect(prefixTitle('Fix it', 'diagram')).toBe('Diagram · Fix it');
   });
 });

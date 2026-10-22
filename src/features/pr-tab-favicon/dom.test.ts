@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MERMAID_OPEN_CLASS } from '../../shared/pageSignals';
 import { ORIGINAL_HREF, ORIGINAL_TYPE, PrTabMarker } from './dom';
-import { renderFavicon } from './model';
+import { renderFavicon, type PrTab } from './model';
 
 const fixture = readFileSync(resolve(process.cwd(), 'tests/fixtures/pr-tab-favicon-head.html'), 'utf8');
 const TITLE = 'Add widget support by octo · Pull Request #42 · acme/widgets';
@@ -19,7 +20,7 @@ function hrefs(): string[] {
   return iconLinks().map((link) => link.getAttribute('href') ?? '');
 }
 
-function start(tab: Parameters<typeof renderFavicon>[0]): PrTabMarker {
+function start(tab: PrTab): PrTabMarker {
   marker = new PrTabMarker(document, tab);
   marker.start();
   return marker;
@@ -36,6 +37,7 @@ beforeEach(() => {
 afterEach(() => {
   marker?.stop();
   marker = null;
+  document.documentElement.classList.remove(MERMAID_OPEN_CLASS);
 });
 
 describe('PrTabMarker', () => {
@@ -107,6 +109,38 @@ describe('PrTabMarker', () => {
     iconLinks()[0]!.setAttribute('href', 'https://example.test/icon.png');
     await flush();
     expect(iconLinks()[0]!.getAttribute('href')).toBe('https://example.test/icon.png');
+  });
+
+  it('shows the diagram badge and title while the Mermaid viewer is open', async () => {
+    const tabMarker = start('conversation');
+    await flush();
+
+    document.documentElement.classList.add(MERMAID_OPEN_CLASS);
+    await flush();
+    expect(hrefs()).toEqual([renderFavicon('diagram'), renderFavicon('diagram')]);
+    expect(document.title).toBe(`Diagram · ${TITLE}`);
+    expect(iconLinks().map((link) => link.getAttribute(ORIGINAL_HREF))).toEqual([PNG_ICON, SVG_ICON]);
+
+    tabMarker.setTab('files');
+    await flush();
+    expect(hrefs()).toEqual([renderFavicon('diagram'), renderFavicon('diagram')]);
+
+    document.documentElement.classList.remove(MERMAID_OPEN_CLASS);
+    await flush();
+    expect(hrefs()).toEqual([renderFavicon('files'), renderFavicon('files')]);
+    expect(document.title).toBe(`Files · ${TITLE}`);
+  });
+
+  it('starts in diagram mode when the viewer is already open, and restores on stop', async () => {
+    document.documentElement.classList.add(MERMAID_OPEN_CLASS);
+    const tabMarker = start('conversation');
+    await flush();
+    expect(hrefs()).toEqual([renderFavicon('diagram'), renderFavicon('diagram')]);
+
+    tabMarker.stop();
+    marker = null;
+    expect(hrefs()).toEqual([PNG_ICON, SVG_ICON]);
+    expect(document.title).toBe(TITLE);
   });
 
   it('leaves a title it did not set when stopping', async () => {

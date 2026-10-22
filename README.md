@@ -102,6 +102,8 @@ shows CI status:
   `Commits · …`
 - **Checks** — orange checklist, `Checks · …`
 - **Files changed** (`/files` and `/changes`) — green file diff, `Files · …`
+- **Mermaid diagram open fullscreen** (on any of those tabs) — amber flowchart,
+  `Diagram · …`, until the viewer closes
 
 The favicon follows the system light or dark theme. Other GitHub pages keep
 the normal favicon.
