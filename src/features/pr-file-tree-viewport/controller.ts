@@ -13,7 +13,7 @@ import {
 } from './dom';
 import { followScrollTop, intersects, unionExtent, type Extent } from './model';
 
-const FOLLOW_MARGIN = 16;
+const FOLLOW_BUFFER_RATIO = 0.1;
 
 export class TreeViewportController {
   private readonly band: TreeViewportBand;
@@ -72,8 +72,8 @@ export class TreeViewportController {
     if (!this.hoveringTree && host.scrollHeight > host.clientHeight) {
       const scrollTop = followScrollTop(
         band,
-        { scrollTop: host.scrollTop, height: host.clientHeight },
-        FOLLOW_MARGIN,
+        { scrollTop: host.scrollTop, height: host.clientHeight, scrollHeight: host.scrollHeight },
+        Math.round(host.clientHeight * FOLLOW_BUFFER_RATIO),
       );
       if (scrollTop !== null) {
         host.scrollTop = scrollTop;

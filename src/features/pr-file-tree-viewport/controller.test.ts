@@ -79,7 +79,7 @@ describe('TreeViewportController', () => {
     layout({ 'diff-readme': [100, 2500] });
     controller.start();
 
-    expect(scroller().scrollTop).toBe(4 * ROW_HEIGHT + 16 - 2 * ROW_HEIGHT);
+    expect(scroller().scrollTop).toBe(2 * ROW_HEIGHT);
     expect(band()?.style.top).toBe(`${3 * ROW_HEIGHT}px`);
   });
 

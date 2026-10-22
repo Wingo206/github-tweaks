@@ -7,6 +7,7 @@ export interface Extent {
 export interface ScrollView {
   scrollTop: number;
   height: number;
+  scrollHeight: number;
 }
 
 export function isPullRequestFilesUrl(url: URL): boolean {
@@ -50,24 +51,36 @@ export function treeRowCandidates(path: string): string[] {
   return candidates;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 /**
- * The `scrollTop` that brings `band` into `view`, or `null` when it is already
- * fully visible. A band taller than the view is aligned to its top.
+ * The `scrollTop` that keeps `band` in `view` with `buffer` pixels of tree
+ * showing beyond it, or `null` when no scroll is needed. When both buffers do
+ * not fit, the band stays fully visible and keeps the buffer on the side it is
+ * moving toward. A band taller than the view is aligned to its top.
  */
 export function followScrollTop(
   band: Extent,
   view: ScrollView,
-  margin: number,
+  buffer: number,
 ): number | null {
-  const visibleBottom = view.scrollTop + view.height;
-  if (band.top >= view.scrollTop && band.bottom <= visibleBottom) {
+  const { scrollTop, height } = view;
+  const bandHeight = band.bottom - band.top;
+  let target: number;
+  if (bandHeight + buffer * 2 <= height) {
+    target = clamp(scrollTop, band.bottom + buffer - height, band.top - buffer);
+  } else if (bandHeight > height) {
+    target = band.top;
+  } else if (band.bottom > scrollTop + height) {
+    target = Math.min(band.bottom + buffer - height, band.top);
+  } else if (band.top < scrollTop) {
+    target = Math.max(band.top - buffer, band.bottom - height);
+  } else {
     return null;
   }
 
-  const fits = band.bottom - band.top + margin * 2 <= view.height;
-  const target =
-    !fits || band.top < view.scrollTop
-      ? band.top - margin
-      : band.bottom + margin - view.height;
-  return Math.max(0, Math.round(target));
+  target = Math.round(clamp(target, 0, view.scrollHeight - height));
+  return Math.abs(target - scrollTop) < 1 ? null : target;
 }

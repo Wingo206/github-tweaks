@@ -75,25 +75,44 @@ describe('treeRowCandidates', () => {
 });
 
 describe('followScrollTop', () => {
-  const view = { scrollTop: 100, height: 300 };
+  const view = { scrollTop: 100, height: 300, scrollHeight: 2000 };
 
-  it('leaves a fully visible band alone', () => {
-    expect(followScrollTop({ top: 100, bottom: 400 }, view, 16)).toBeNull();
+  it('leaves a band clear of both buffers alone', () => {
+    expect(followScrollTop({ top: 150, bottom: 350 }, view, 30)).toBeNull();
+  });
+
+  it('scrolls once a band enters the bottom buffer', () => {
+    expect(followScrollTop({ top: 300, bottom: 380 }, view, 30)).toBe(110);
   });
 
   it('scrolls up to a band above the view', () => {
-    expect(followScrollTop({ top: 50, bottom: 82 }, view, 16)).toBe(34);
+    expect(followScrollTop({ top: 50, bottom: 82 }, view, 30)).toBe(20);
   });
 
   it('scrolls down to a band below the view', () => {
-    expect(followScrollTop({ top: 420, bottom: 452 }, view, 16)).toBe(168);
+    expect(followScrollTop({ top: 420, bottom: 452 }, view, 30)).toBe(182);
+  });
+
+  it('keeps the buffer ahead of a band moving down when only one fits', () => {
+    const band = { top: 380, bottom: 640 };
+    expect(followScrollTop(band, view, 30)).toBe(370);
+    expect(followScrollTop(band, { ...view, scrollTop: 370 }, 30)).toBeNull();
+  });
+
+  it('keeps the buffer ahead of a band moving up when only one fits', () => {
+    expect(followScrollTop({ top: 50, bottom: 310 }, view, 30)).toBe(20);
   });
 
   it('aligns a band taller than the view to its top', () => {
-    expect(followScrollTop({ top: 500, bottom: 1200 }, view, 16)).toBe(484);
+    expect(followScrollTop({ top: 500, bottom: 1200 }, view, 30)).toBe(500);
   });
 
   it('never scrolls above the start', () => {
-    expect(followScrollTop({ top: 4, bottom: 36 }, view, 16)).toBe(0);
+    expect(followScrollTop({ top: 4, bottom: 36 }, view, 30)).toBe(0);
+    expect(followScrollTop({ top: 4, bottom: 36 }, { ...view, scrollTop: 0 }, 30)).toBeNull();
+  });
+
+  it('never scrolls past the end', () => {
+    expect(followScrollTop({ top: 460, bottom: 492 }, { ...view, scrollHeight: 500 }, 30)).toBe(200);
   });
 });
