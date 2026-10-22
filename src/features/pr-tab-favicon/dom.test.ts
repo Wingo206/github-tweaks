@@ -41,42 +41,39 @@ afterEach(() => {
 });
 
 describe('PrTabMarker', () => {
-  it('replaces both GitHub favicons and prefixes the title', async () => {
+  it('replaces both GitHub favicons and leaves the title alone', async () => {
     start('files');
     await flush();
 
     expect(hrefs()).toEqual([renderFavicon('files'), renderFavicon('files')]);
     expect(iconLinks().every((link) => link.type === 'image/svg+xml')).toBe(true);
-    expect(document.title).toBe(`Files · ${TITLE}`);
+    expect(document.title).toBe(TITLE);
     expect(document.head.querySelector('link[rel="mask-icon"]')!.getAttribute('href')).toContain(
       'pinned-octocat',
     );
   });
 
-  it('switches tab without stacking prefixes or losing the originals', async () => {
+  it('switches tab without losing the originals', async () => {
     const tabMarker = start('conversation');
     tabMarker.setTab('commits');
     await flush();
 
     expect(hrefs()).toEqual([renderFavicon('commits'), renderFavicon('commits')]);
-    expect(document.title).toBe(`Commits · ${TITLE}`);
     expect(iconLinks().map((link) => link.getAttribute(ORIGINAL_HREF))).toEqual([PNG_ICON, SVG_ICON]);
   });
 
-  it('re-applies after GitHub rewrites the favicon or title', async () => {
+  it('re-applies after GitHub rewrites the favicon', async () => {
     start('checks');
     await flush();
 
     const svgLink = iconLinks()[1]!;
     svgLink.setAttribute('href', 'https://github.githubassets.com/favicons/favicon-success.svg');
-    document.title = 'Renamed PR · Pull Request #42 · acme/widgets';
     await flush();
 
     expect(svgLink.getAttribute('href')).toBe(renderFavicon('checks'));
     expect(svgLink.getAttribute(ORIGINAL_HREF)).toBe(
       'https://github.githubassets.com/favicons/favicon-success.svg',
     );
-    expect(document.title).toBe('Checks · Renamed PR · Pull Request #42 · acme/widgets');
   });
 
   it('re-applies when the favicon links are replaced', async () => {
@@ -87,10 +84,9 @@ describe('PrTabMarker', () => {
     await flush();
 
     expect(hrefs()).toEqual([renderFavicon('files'), renderFavicon('files')]);
-    expect(document.title).toBe(`Files · ${TITLE}`);
   });
 
-  it('restores GitHub’s latest favicon, type, and title on stop', async () => {
+  it('restores GitHub’s latest favicon and type on stop', async () => {
     const tabMarker = start('files');
     await flush();
     iconLinks()[1]!.setAttribute('href', 'https://github.githubassets.com/favicons/favicon-failure.svg');
@@ -104,21 +100,20 @@ describe('PrTabMarker', () => {
     expect(iconLinks().some((link) => link.hasAttribute(ORIGINAL_HREF) || link.hasAttribute(ORIGINAL_TYPE))).toBe(
       false,
     );
-    expect(document.title).toBe(TITLE);
 
     iconLinks()[0]!.setAttribute('href', 'https://example.test/icon.png');
     await flush();
     expect(iconLinks()[0]!.getAttribute('href')).toBe('https://example.test/icon.png');
   });
 
-  it('shows the diagram badge and title while the Mermaid viewer is open', async () => {
+  it('shows the diagram badge while the Mermaid viewer is open', async () => {
     const tabMarker = start('conversation');
     await flush();
 
     document.documentElement.classList.add(MERMAID_OPEN_CLASS);
     await flush();
     expect(hrefs()).toEqual([renderFavicon('diagram'), renderFavicon('diagram')]);
-    expect(document.title).toBe(`Diagram · ${TITLE}`);
+    expect(document.title).toBe(TITLE);
     expect(iconLinks().map((link) => link.getAttribute(ORIGINAL_HREF))).toEqual([PNG_ICON, SVG_ICON]);
 
     tabMarker.setTab('files');
@@ -128,7 +123,6 @@ describe('PrTabMarker', () => {
     document.documentElement.classList.remove(MERMAID_OPEN_CLASS);
     await flush();
     expect(hrefs()).toEqual([renderFavicon('files'), renderFavicon('files')]);
-    expect(document.title).toBe(`Files · ${TITLE}`);
   });
 
   it('starts in diagram mode when the viewer is already open, and restores on stop', async () => {
@@ -140,17 +134,5 @@ describe('PrTabMarker', () => {
     tabMarker.stop();
     marker = null;
     expect(hrefs()).toEqual([PNG_ICON, SVG_ICON]);
-    expect(document.title).toBe(TITLE);
-  });
-
-  it('leaves a title it did not set when stopping', async () => {
-    const tabMarker = start('commits');
-    await flush();
-    document.title = 'Issues · acme/widgets';
-
-    tabMarker.stop();
-    marker = null;
-
-    expect(document.title).toBe('Issues · acme/widgets');
   });
 });

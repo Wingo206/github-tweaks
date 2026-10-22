@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAVICON_MODES, parsePrTab, prefixTitle, renderFavicon } from './model';
+import { FAVICON_MODES, parsePrTab, renderFavicon } from './model';
 
 describe('parsePrTab', () => {
   it.each([
@@ -49,13 +49,5 @@ describe('renderFavicon', () => {
     );
     expect(badgeFills.every(Boolean)).toBe(true);
     expect(new Set(badgeFills).size).toBe(FAVICON_MODES.length);
-  });
-});
-
-describe('prefixTitle', () => {
-  it('prefixes the tab label', () => {
-    expect(prefixTitle('Fix it · Pull Request #42', 'files')).toBe('Files · Fix it · Pull Request #42');
-    expect(prefixTitle('Fix it', 'conversation')).toBe('Conversation · Fix it');
-    expect(prefixTitle('Fix it', 'diagram')).toBe('Diagram · Fix it');
   });
 });

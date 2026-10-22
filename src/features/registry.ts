@@ -56,7 +56,7 @@ export const FEATURES: readonly FeatureDefinition[] = [
   {
     id: 'pr-tab-favicon',
     title: 'Pull request tab icons',
-    description: 'Per-tab favicon and title prefix for Conversation, Commits, Checks, and Files changed.',
+    description: 'Per-tab favicon for Conversation, Commits, Checks, and Files changed.',
     defaultEnabled: true,
   },
 ];

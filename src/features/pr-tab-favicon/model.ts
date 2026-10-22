@@ -14,14 +14,6 @@ const SUBPATH_TABS: Record<string, PrTab> = {
   changes: 'files',
 };
 
-const TITLE_LABELS: Record<FaviconMode, string> = {
-  conversation: 'Conversation',
-  commits: 'Commits',
-  checks: 'Checks',
-  files: 'Files',
-  diagram: 'Diagram',
-};
-
 /** Primer foreground colors for light and dark themes. */
 const BADGE_COLORS: Record<FaviconMode, { light: string; dark: string }> = {
   conversation: { light: '#0969da', dark: '#4493f8' },
@@ -80,8 +72,4 @@ export function renderFavicon(mode: FaviconMode): string {
     `<path class="mark" d="${OCTOCAT_PATH}"/>` +
     `<path class="badge" transform="translate(16 16)" d="${ICON_PATHS[mode]}"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
-export function prefixTitle(title: string, mode: FaviconMode): string {
-  return `${TITLE_LABELS[mode]} · ${title}`;
 }

@@ -1,11 +1,5 @@
 import { MERMAID_OPEN_CLASS } from '../../shared/pageSignals';
-import {
-  FAVICON_MODES,
-  prefixTitle,
-  renderFavicon,
-  type FaviconMode,
-  type PrTab,
-} from './model';
+import { FAVICON_MODES, renderFavicon, type FaviconMode, type PrTab } from './model';
 
 export const ORIGINAL_HREF = 'data-ght-favicon-href';
 export const ORIGINAL_TYPE = 'data-ght-favicon-type';
@@ -14,17 +8,14 @@ const ICON_LINKS = 'link[rel~="icon"]';
 const OWN_HREFS = new Set(FAVICON_MODES.map(renderFavicon));
 
 /**
- * Keeps the tab favicon and title marked for one PR tab, or for a diagram
- * while the Mermaid fullscreen viewer is open over it. GitHub rewrites the
- * favicon for CI status and the title on navigation, so both are re-applied
- * whenever `<head>` changes, and GitHub's latest values are what `stop`
- * restores.
+ * Keeps the tab favicon marked for one PR tab, or for a diagram while the
+ * Mermaid fullscreen viewer is open over it. GitHub rewrites the favicon for
+ * CI status, so it is re-applied whenever `<head>` changes, and GitHub's
+ * latest value is what `stop` restores.
  */
 export class PrTabMarker {
   private headObserver: MutationObserver | null = null;
   private rootObserver: MutationObserver | null = null;
-  private baseTitle = '';
-  private appliedTitle: string | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -37,7 +28,6 @@ export class PrTabMarker {
     this.headObserver.observe(this.doc.head, {
       subtree: true,
       childList: true,
-      characterData: true,
       attributes: true,
       attributeFilter: ['href'],
     });
@@ -71,11 +61,6 @@ export class PrTabMarker {
       link.removeAttribute(ORIGINAL_HREF);
       link.removeAttribute(ORIGINAL_TYPE);
     }
-
-    if (this.appliedTitle !== null && this.doc.title === this.appliedTitle) {
-      this.doc.title = this.baseTitle;
-    }
-    this.appliedTitle = null;
   }
 
   private mode(): FaviconMode {
@@ -83,8 +68,7 @@ export class PrTabMarker {
   }
 
   private sync(): void {
-    const mode = this.mode();
-    const href = renderFavicon(mode);
+    const href = renderFavicon(this.mode());
     for (const link of this.doc.head.querySelectorAll<HTMLLinkElement>(ICON_LINKS)) {
       const current = link.getAttribute('href') ?? '';
       if (current === href) {
@@ -98,15 +82,6 @@ export class PrTabMarker {
       }
       link.setAttribute('type', 'image/svg+xml');
       link.setAttribute('href', href);
-    }
-
-    const title = this.doc.title;
-    if (title !== this.appliedTitle) {
-      this.baseTitle = title;
-    }
-    this.appliedTitle = prefixTitle(this.baseTitle, mode);
-    if (title !== this.appliedTitle) {
-      this.doc.title = this.appliedTitle;
     }
   }
 }
