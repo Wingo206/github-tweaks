@@ -6,6 +6,8 @@ import { createConnection, type Socket } from 'node:net';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import {
+  checkoutBlocker,
+  describeCheckoutBlocker,
   encodeMessage,
   LineDecoder,
   parseServerMessage,
@@ -14,6 +16,7 @@ import {
   type WindowMessage,
 } from '../protocol';
 import { defaultConfigDir, defaultSocketPath, readToken } from '../server/config';
+import { CheckoutRunner } from './checkout';
 import { openFile } from './openFile';
 import { WindowStateTracker } from './windowState';
 
@@ -35,11 +38,14 @@ export function activate(context: vscode.ExtensionContext): void {
     log,
   });
   const tracker = new WindowStateTracker(() => connection.sendState());
+  const checkout = new CheckoutRunner(tracker, log);
   connection.tracker = tracker;
+  connection.checkout = checkout;
 
   context.subscriptions.push(
     output,
     tracker,
+    checkout,
     connection,
     vscode.commands.registerCommand('githubTweaksCompanion.copyPairingToken', async () => {
       const token = readToken(defaultConfigDir());
@@ -71,6 +77,8 @@ export function activate(context: vscode.ExtensionContext): void {
       for (const folder of folders) {
         output.appendLine(`    ${folder.path}`);
         output.appendLine(`      branch: ${folder.branch ?? '(detached)'}, upstream: ${folder.upstreamBranch ?? '(none)'}`);
+        const blocker = checkoutBlocker(folder);
+        output.appendLine(`      checkout: ${blocker ? describeCheckoutBlocker(blocker) : 'clean'}`);
         output.appendLine(`      remotes: ${folder.remotes.join(', ') || '(no GitHub remotes)'}`);
       }
     }),
@@ -102,6 +110,7 @@ interface ConnectionOptions {
 
 class CompanionConnection implements vscode.Disposable {
   tracker: WindowStateTracker | null = null;
+  checkout: CheckoutRunner | null = null;
   private socket: Socket | null = null;
   private connecting = false;
   private disposed = false;
@@ -211,13 +220,22 @@ class CompanionConnection implements vscode.Disposable {
   }
 
   private async handle(message: Exclude<ServerMessage, { type: 'restart' }>): Promise<void> {
+    const reply = message.type === 'open' ? 'opened' : 'checkout-started';
     try {
-      await openFile(message.path, message.line, message.column);
-      this.send({ type: 'opened', requestId: message.requestId, ok: true });
+      if (message.type === 'open') {
+        await openFile(message.path, message.line, message.column);
+      } else {
+        if (!this.checkout) {
+          throw new Error('Checkout is unavailable in this window.');
+        }
+        const { requestId: _requestId, type: _type, path, ...command } = message;
+        await this.checkout.run(path, command);
+      }
+      this.send({ type: reply, requestId: message.requestId, ok: true });
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      this.options.log(`open ${message.path} failed: ${text}`);
-      this.send({ type: 'opened', requestId: message.requestId, ok: false, error: text });
+      this.options.log(`${message.type} ${message.path} failed: ${text}`);
+      this.send({ type: reply, requestId: message.requestId, ok: false, error: text });
     }
   }
 

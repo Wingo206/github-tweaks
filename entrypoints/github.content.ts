@@ -7,6 +7,7 @@ import {
   type MermaidLogExport,
 } from '../src/features/mermaid-fullscreen/diagnostics';
 import { OpenInCursorFeature } from '../src/features/open-in-cursor';
+import { PrCheckoutBranchFeature } from '../src/features/pr-checkout-branch';
 import { PrFileTreeViewportFeature } from '../src/features/pr-file-tree-viewport';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
@@ -32,6 +33,7 @@ export default defineContentScript({
       'pr-handback-assignee': new PrHandbackAssigneeFeature(),
       'pr-people-pins': new PrPeoplePinsFeature(),
       'open-in-cursor': new OpenInCursorFeature(),
+      'pr-checkout-branch': new PrCheckoutBranchFeature(),
       'pr-tab-favicon': new PrTabFaviconFeature(),
     };
     const runner = new FeatureRunner(

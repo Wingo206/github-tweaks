@@ -1,9 +1,18 @@
-import type {
-  HealthResponse,
-  OpenRequest,
-  OpenResponse,
+import {
+  describeCheckoutBlocker,
+  type BranchStatusRequest,
+  type BranchStatusResponse,
+  type CheckoutRequest,
+  type CheckoutResponse,
+  type FocusRequest,
+  type FocusResponse,
+  type HealthResponse,
+  type OpenRequest,
+  type OpenResponse,
 } from '../../companion/src/protocol';
 import type {
+  CheckoutActionResult,
+  CheckoutStatusResult,
   CompanionSettingsView,
   CompanionStatus,
   OpenFailureReason,
@@ -36,11 +45,16 @@ export interface OpenDependencies {
   now?(): number;
 }
 
-type Attempt =
+type Attempt<T = OpenResponse> =
   | { kind: 'offline' }
   | { kind: 'unauthorized' }
   | { kind: 'rejected'; message: string }
-  | { kind: 'response'; response: OpenResponse };
+  | { kind: 'response'; response: T };
+
+const NOT_PAIRED_MESSAGE =
+  'Not paired. Run “GitHub Tweaks: Copy pairing token” in Cursor and paste it into the GitHub Tweaks popup.';
+const OFFLINE_MESSAGE = 'Companion offline. Open a Cursor window to start it.';
+const UNAUTHORIZED_MESSAGE = 'Pairing token rejected. Copy it again from Cursor.';
 
 export async function getCompanionSettings(): Promise<CompanionSettings> {
   const stored = await browser.storage.local.get([PORT_KEY, TOKEN_KEY]);
@@ -115,25 +129,22 @@ export async function openInCursor(
   const now = deps.now ?? Date.now;
   const settings = await getCompanionSettings();
   if (!settings.token) {
-    return failed(
-      'not-paired',
-      'Not paired. Run “GitHub Tweaks: Copy pairing token” in Cursor and paste it into the GitHub Tweaks popup.',
-    );
+    return failed('not-paired', NOT_PAIRED_MESSAGE);
   }
 
   const repoKey = request.repo.toLowerCase();
-  let attempt = await postOpen(settings, request);
+  let attempt = await post<OpenResponse>(settings, '/open', request);
 
   if (attempt.kind === 'offline') {
     const cached = (await getLaunchCache())[repoKey];
     if (!cached) {
-      return failed('companion-offline', 'Companion offline. Open a Cursor window to start it.');
+      return failed('companion-offline', OFFLINE_MESSAGE);
     }
     await deps.openUrl(cached.launchUrl);
     const deadline = now() + RETRY_BUDGET_MS;
     while (true) {
       await sleep(RETRY_INTERVAL_MS);
-      attempt = await postOpen(settings, request);
+      attempt = await post<OpenResponse>(settings, '/open', request);
       const waiting =
         attempt.kind === 'offline' ||
         (attempt.kind === 'response' &&
@@ -158,12 +169,97 @@ export async function openInCursor(
   return toResult(attempt, request.repo);
 }
 
+export async function getBranchStatus(request: BranchStatusRequest): Promise<CheckoutStatusResult> {
+  const settings = await getCompanionSettings();
+  if (!settings.token) {
+    return { status: 'failed', reason: 'not-paired', message: NOT_PAIRED_MESSAGE };
+  }
+  const attempt = await post<BranchStatusResponse>(settings, '/branch-status', request);
+  switch (attempt.kind) {
+    case 'offline':
+      return { status: 'failed', reason: 'companion-offline', message: OFFLINE_MESSAGE };
+    case 'unauthorized':
+      return { status: 'failed', reason: 'not-paired', message: UNAUTHORIZED_MESSAGE };
+    case 'rejected':
+      return { status: 'failed', reason: 'failed', message: attempt.message };
+    case 'response':
+      return { status: 'ok', clones: attempt.response.clones };
+  }
+}
+
+/** Starts a checkout in the clone's Cursor window and brings it forward. */
+export async function startCheckout(
+  request: CheckoutRequest,
+  deps: Pick<OpenDependencies, 'openUrl'>,
+): Promise<CheckoutActionResult> {
+  const attempt = await postAction<CheckoutResponse>('/checkout', request);
+  if (attempt.kind !== 'response') {
+    return attempt.result;
+  }
+  const { response } = attempt;
+  switch (response.status) {
+    case 'started':
+    case 'checked-out':
+      if (response.launchUrl) {
+        await deps.openUrl(response.launchUrl);
+      }
+      return { status: response.status };
+    case 'blocked':
+      return { status: 'failed', message: `${describeCheckoutBlocker(response.blocker)}.` };
+    case 'not-open':
+      return { status: 'failed', message: 'That clone is no longer open in Cursor.' };
+    case 'error':
+      return { status: 'failed', message: response.message };
+  }
+}
+
+export async function focusFolder(
+  request: FocusRequest,
+  deps: Pick<OpenDependencies, 'openUrl'>,
+): Promise<CheckoutActionResult> {
+  const attempt = await postAction<FocusResponse>('/focus', request);
+  if (attempt.kind !== 'response') {
+    return attempt.result;
+  }
+  const { response } = attempt;
+  switch (response.status) {
+    case 'focused':
+      return { status: 'focused' };
+    case 'launch':
+      await deps.openUrl(response.launchUrl);
+      return { status: 'focused' };
+    case 'not-open':
+      return { status: 'failed', message: 'That clone is no longer open in Cursor.' };
+  }
+}
+
+async function postAction<T>(
+  path: string,
+  body: unknown,
+): Promise<{ kind: 'response'; response: T } | { kind: 'failed'; result: CheckoutActionResult }> {
+  const settings = await getCompanionSettings();
+  if (!settings.token) {
+    return { kind: 'failed', result: { status: 'failed', message: NOT_PAIRED_MESSAGE } };
+  }
+  const attempt = await post<T>(settings, path, body);
+  switch (attempt.kind) {
+    case 'offline':
+      return { kind: 'failed', result: { status: 'failed', message: OFFLINE_MESSAGE } };
+    case 'unauthorized':
+      return { kind: 'failed', result: { status: 'failed', message: UNAUTHORIZED_MESSAGE } };
+    case 'rejected':
+      return { kind: 'failed', result: { status: 'failed', message: attempt.message } };
+    case 'response':
+      return attempt;
+  }
+}
+
 function toResult(attempt: Attempt, repo: string): OpenResult {
   switch (attempt.kind) {
     case 'offline':
-      return failed('companion-offline', 'Companion offline. Open a Cursor window to start it.');
+      return failed('companion-offline', OFFLINE_MESSAGE);
     case 'unauthorized':
-      return failed('not-paired', 'Pairing token rejected. Copy it again from Cursor.');
+      return failed('not-paired', UNAUTHORIZED_MESSAGE);
     case 'rejected':
       return failed('open-failed', attempt.message);
   }
@@ -183,16 +279,16 @@ function toResult(attempt: Attempt, repo: string): OpenResult {
   }
 }
 
-async function postOpen(settings: CompanionSettings, request: OpenRequest): Promise<Attempt> {
+async function post<T>(settings: CompanionSettings, path: string, body: unknown): Promise<Attempt<T>> {
   let response: Response;
   try {
-    response = await fetchWithTimeout(`${baseUrl(settings)}/open`, {
+    response = await fetchWithTimeout(`${baseUrl(settings)}${path}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${settings.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify(body),
     });
   } catch {
     return { kind: 'offline' };
@@ -204,7 +300,7 @@ async function postOpen(settings: CompanionSettings, request: OpenRequest): Prom
     return { kind: 'rejected', message: `The companion rejected the request (${response.status}).` };
   }
   try {
-    return { kind: 'response', response: (await response.json()) as OpenResponse };
+    return { kind: 'response', response: (await response.json()) as T };
   } catch {
     return { kind: 'rejected', message: 'The companion returned an unreadable response.' };
   }

@@ -1,6 +1,6 @@
-import type { Ref } from '../../companion/src/protocol';
+import type { CloneStatus, Ref } from '../../companion/src/protocol';
 
-export type { Ref };
+export type { CloneStatus, Ref };
 
 export type ViewedState = 'VIEWED' | 'UNVIEWED' | 'DISMISSED';
 
@@ -93,6 +93,21 @@ export type OpenResult =
   | { status: 'opened' }
   | { status: 'failed'; reason: OpenFailureReason; message: string };
 
+/** A pull request's head branch, as shown in the PR header. */
+export interface CheckoutTarget extends PullRequestRef {
+  branch: string;
+  /** Head branch lives in another repository. */
+  fork: boolean;
+}
+
+export type CheckoutStatusResult =
+  | { status: 'ok'; clones: CloneStatus[] }
+  | { status: 'failed'; reason: 'not-paired' | 'companion-offline' | 'failed'; message: string };
+
+export type CheckoutActionResult =
+  | { status: 'started' | 'checked-out' | 'focused' }
+  | { status: 'failed'; message: string };
+
 export type CompanionStatus =
   | { connected: true; version: string; windows: number }
   | { connected: false; reason: 'not-paired' | 'offline' | 'unauthorized' };
@@ -104,6 +119,9 @@ export interface CompanionSettingsView {
 
 export type BackgroundRequest =
   | { type: 'open-in-cursor'; target: OpenTarget }
+  | { type: 'checkout:status'; target: CheckoutTarget }
+  | { type: 'checkout:start'; target: CheckoutTarget; folder: string }
+  | { type: 'checkout:focus'; folder: string }
   | { type: 'companion-status' }
   | { type: 'companion:get-settings' }
   | { type: 'companion:save-settings'; port?: number; token?: string }

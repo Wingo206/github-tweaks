@@ -1,8 +1,8 @@
 {
   "name": "github-tweaks-companion",
   "displayName": "GitHub Tweaks Companion",
-  "description": "Opens files from GitHub Tweaks in the right local Cursor window.",
-  "version": "0.1.0",
+  "description": "Opens files and checks out pull request branches from GitHub Tweaks in the right local Cursor window.",
+  "version": "0.2.0",
   "publisher": "local",
   "license": "MIT",
   "private": true,

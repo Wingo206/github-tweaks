@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { OpenRequest, OpenResponse } from '../../companion/src/protocol';
-import { getCompanionStatus, openInCursor, saveCompanionSettings } from './client';
+import {
+  focusFolder,
+  getBranchStatus,
+  getCompanionStatus,
+  openInCursor,
+  saveCompanionSettings,
+  startCheckout,
+} from './client';
 
 const request: OpenRequest = {
   repo: 'Acme/Widgets',
@@ -148,5 +155,63 @@ describe('getCompanionStatus', () => {
       vi.fn(async () => new Response(JSON.stringify({ ok: true, version: '0.1.0', windows: 3 }))),
     );
     expect(await getCompanionStatus()).toEqual({ connected: true, version: '0.1.0', windows: 3 });
+  });
+});
+
+describe('checkout client', () => {
+  const checkout = {
+    repo: 'acme/widgets',
+    folder: '/home/me/widgets',
+    branch: 'feature/x',
+    pullNumber: 42,
+    fork: false,
+  };
+
+  it('reports branch status, or why the companion is unreachable', async () => {
+    expect(await getBranchStatus({ repo: 'acme/widgets', branch: 'feature/x' })).toMatchObject({
+      status: 'failed',
+      reason: 'not-paired',
+    });
+    await pair();
+    const clones = [{ path: '/home/me/widgets', branch: 'main', checkedOut: false, blocker: null }];
+    const fetchMock = mockServer([{ clones } as unknown as OpenResponse]);
+    expect(await getBranchStatus({ repo: 'acme/widgets', branch: 'feature/x' })).toEqual({ status: 'ok', clones });
+    expect(fetchMock.mock.calls[0]![0]).toBe('http://127.0.0.1:17999/branch-status');
+    mockServer(['offline']);
+    expect(await getBranchStatus({ repo: 'acme/widgets', branch: 'feature/x' })).toMatchObject({
+      status: 'failed',
+      reason: 'companion-offline',
+    });
+  });
+
+  it('opens the launch URL when the window could not be raised', async () => {
+    await pair();
+    mockServer([{ status: 'started', folder: checkout.folder, launchUrl } as unknown as OpenResponse]);
+    const openUrl = vi.fn(async () => undefined);
+    expect(await startCheckout(checkout, { openUrl })).toEqual({ status: 'started' });
+    expect(openUrl).toHaveBeenCalledWith(launchUrl);
+  });
+
+  it('explains blocked checkouts', async () => {
+    await pair();
+    mockServer([
+      {
+        status: 'blocked',
+        folder: checkout.folder,
+        blocker: { kind: 'changes', staged: 0, modified: 3, conflicts: 0 },
+      } as unknown as OpenResponse,
+    ]);
+    expect(await startCheckout(checkout, { openUrl: vi.fn() })).toEqual({
+      status: 'failed',
+      message: 'Uncommitted changes: 3 modified.',
+    });
+  });
+
+  it('focuses through the launch URL as a fallback', async () => {
+    await pair();
+    mockServer([{ status: 'launch', launchUrl } as unknown as OpenResponse]);
+    const openUrl = vi.fn(async () => undefined);
+    expect(await focusFolder({ folder: checkout.folder }, { openUrl })).toEqual({ status: 'focused' });
+    expect(openUrl).toHaveBeenCalledWith(launchUrl);
   });
 });

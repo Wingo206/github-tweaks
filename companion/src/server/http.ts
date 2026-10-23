@@ -1,7 +1,16 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  parseBranchStatusRequest,
+  parseCheckoutRequest,
+  parseFocusRequest,
   parseOpenRequest,
+  type BranchStatusRequest,
+  type BranchStatusResponse,
+  type CheckoutRequest,
+  type CheckoutResponse,
+  type FocusRequest,
+  type FocusResponse,
   type HealthResponse,
   type OpenRequest,
   type OpenResponse,
@@ -14,11 +23,29 @@ export interface HttpDependencies {
   version: string;
   windowCount(): number;
   open(request: OpenRequest): Promise<OpenResponse>;
+  branchStatus(request: BranchStatusRequest): Promise<BranchStatusResponse>;
+  checkout(request: CheckoutRequest): Promise<CheckoutResponse>;
+  focus(request: FocusRequest): Promise<FocusResponse>;
   log(message: string): void;
+}
+
+interface PostRoute {
+  parse(body: unknown): unknown;
+  handle(request: unknown): Promise<unknown>;
+}
+
+function route<T>(parse: (body: unknown) => T | null, handle: (request: T) => Promise<unknown>): PostRoute {
+  return { parse, handle: (request) => handle(request as T) };
 }
 
 export function createHttpHandler(deps: HttpDependencies) {
   const expected = Buffer.from(`Bearer ${deps.token}`);
+  const postRoutes: Record<string, PostRoute> = {
+    '/open': route(parseOpenRequest, deps.open),
+    '/branch-status': route(parseBranchStatusRequest, deps.branchStatus),
+    '/checkout': route(parseCheckoutRequest, deps.checkout),
+    '/focus': route(parseFocusRequest, deps.focus),
+  };
 
   const rejection = (request: IncomingMessage): string | null => {
     // Chrome omits Origin on extension GETs. Web pages cannot send Authorization
@@ -50,15 +77,16 @@ export function createHttpHandler(deps: HttpDependencies) {
       return;
     }
 
-    if (request.method === 'POST' && url.pathname === '/open') {
+    const postRoute = request.method === 'POST' ? postRoutes[url.pathname] : undefined;
+    if (postRoute) {
       void readJson(request)
         .then(async (body) => {
-          const openRequest = parseOpenRequest(body);
-          if (!openRequest) {
+          const parsed = postRoute.parse(body);
+          if (!parsed) {
             sendJson(response, 400, { error: 'malformed request' });
             return;
           }
-          sendJson(response, 200, await deps.open(openRequest));
+          sendJson(response, 200, await postRoute.handle(parsed));
         })
         .catch((error: unknown) => {
           deps.log(`http: ${String(error)}`);

@@ -5,6 +5,7 @@ export type FeatureId =
   | 'pr-handback-assignee'
   | 'pr-people-pins'
   | 'open-in-cursor'
+  | 'pr-checkout-branch'
   | 'pr-tab-favicon';
 
 export interface FeatureDefinition {
@@ -51,6 +52,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'open-in-cursor',
     title: 'Open in Cursor',
     description: 'Open PR lines, review comments, and files in the matching local Cursor window.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-checkout-branch',
+    title: 'Check out PR branch locally',
+    description: 'Check out the head branch in an open Cursor window, from beside the branch name.',
     defaultEnabled: true,
   },
   {

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { normalizeRemote, type FolderState } from '../protocol';
+import { normalizeRemote, type FolderState, type WorkingTreeState } from '../protocol';
 
 // Minimal subset of the built-in git extension API (extensions/git/src/api/git.d.ts).
-interface GitRemote {
+export interface GitRemote {
+  readonly name: string;
   readonly fetchUrl?: string;
   readonly pushUrl?: string;
 }
@@ -12,15 +13,24 @@ interface GitBranch {
   readonly upstream?: { readonly name: string; readonly remote: string };
 }
 
+interface GitChange {
+  readonly status: number;
+}
+
 interface GitRepositoryState {
   readonly HEAD: GitBranch | undefined;
   readonly remotes: GitRemote[];
+  readonly indexChanges: GitChange[];
+  readonly workingTreeChanges: GitChange[];
+  readonly mergeChanges: GitChange[];
+  readonly rebaseCommit?: unknown;
   readonly onDidChange: vscode.Event<void>;
 }
 
-interface GitRepository {
+export interface GitRepository {
   readonly rootUri: vscode.Uri;
   readonly state: GitRepositoryState;
+  status(): Promise<void>;
 }
 
 interface GitApi {
@@ -36,6 +46,9 @@ interface GitExtension {
 }
 
 const DEBOUNCE_MS = 250;
+
+// `Status.UNTRACKED` and `Status.IGNORED` in the git extension API.
+const UNTRACKED_STATUSES = new Set([7, 8]);
 
 /**
  * Tracks this window's git repositories and focus, calling `onChange` with
@@ -90,8 +103,13 @@ export class WindowStateTracker implements vscode.Disposable {
         remotes: [...new Set(remotes)],
         branch: head?.name ?? null,
         upstreamBranch: head?.upstream?.name ?? null,
+        workingTree: workingTreeState(repository),
       };
     });
+  }
+
+  repository(path: string): GitRepository | null {
+    return this.git?.repositories.find((repository) => repository.rootUri.fsPath === path) ?? null;
   }
 
   focused(): boolean {
@@ -131,4 +149,14 @@ export class WindowStateTracker implements vscode.Disposable {
     }
     this.onChange();
   }
+}
+
+export function workingTreeState(repository: GitRepository): WorkingTreeState {
+  const { state } = repository;
+  return {
+    staged: state.indexChanges.length,
+    modified: state.workingTreeChanges.filter((change) => !UNTRACKED_STATUSES.has(change.status)).length,
+    conflicts: state.mergeChanges.length,
+    rebasing: state.rebaseCommit !== undefined && state.rebaseCommit !== null,
+  };
 }

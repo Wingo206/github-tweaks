@@ -5,7 +5,7 @@ import { cloneCandidates, rankTargets, windowCandidates } from './ranking';
 const remote = 'github.com/acme/widgets';
 
 function folder(path: string, overrides: Partial<FolderState> = {}): FolderState {
-  return { path, remotes: [remote], branch: 'main', upstreamBranch: 'main', ...overrides };
+  return { path, remotes: [remote], branch: 'main', upstreamBranch: 'main', workingTree: null, ...overrides };
 }
 
 function request(overrides: Partial<OpenRequest> = {}): OpenRequest {

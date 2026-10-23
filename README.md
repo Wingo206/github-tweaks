@@ -90,6 +90,27 @@ Reload each Cursor window, run **GitHub Tweaks: Copy pairing token** from the
 command palette, and paste the token into the **Cursor companion** section of
 the toolbar popup. The current version supports WSL Cursor windows on Windows.
 
+### Check out PR branch locally
+
+On pull request pages, a button beside **Copy head branch name** checks out
+the head branch in one of your open Cursor windows. When a clone already has
+the branch, the button shows its name (for example, a check and `bagel`).
+Otherwise its menu lists every clone of the repository open in Cursor, with
+its current branch:
+
+- **Check out** runs in an integrated terminal in that clone's window, so git
+  hooks can prompt as usual: `git fetch <remote> <branch>`, then `git switch`.
+  Branches from forks use `gh pr checkout <number>`.
+- Clones with staged, modified, or conflicted files, or a rebase in progress,
+  are listed with the reason and only offer **Focus window**. Untracked files
+  do not block.
+- Clicking a clone that already has the branch focuses its window.
+
+Hooks that ask questions only prompt when they have a terminal, so behavior
+matches running the command yourself. Configure hook defaults in the hook
+itself (for example, with its `git config` settings). This uses the same
+companion and pairing as Open in Cursor.
+
 ### Pull request tab icons
 
 Each pull request tab gets its own favicon badge, so several tabs of the same

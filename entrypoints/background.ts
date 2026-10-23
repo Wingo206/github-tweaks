@@ -15,10 +15,13 @@ import {
 import { loadPullRequestFiles } from '../src/github/pullRequestFiles';
 import { loadPullRequestContext } from '../src/github/pullRequestContext';
 import {
+  focusFolder,
+  getBranchStatus,
   getCompanionSettingsView,
   getCompanionStatus,
   openInCursor,
   saveCompanionSettings,
+  startCheckout,
 } from '../src/companion/client';
 import { resolveOpenTarget } from '../src/companion/resolveTarget';
 import type { BackgroundRequest, BackgroundResponse } from '../src/shared/types';
@@ -68,15 +71,25 @@ async function handleRequest(
       if (!resolution.ok) {
         return resolution.result;
       }
-      const tabId = sender.tab?.id;
-      return openInCursor(resolution.request, {
-        openUrl: async (url) => {
-          if (tabId !== undefined) {
-            await browser.tabs.update(tabId, { url });
-          }
-        },
-      });
+      return openInCursor(resolution.request, { openUrl: tabUrlOpener(sender) });
     }
+    case 'checkout:status':
+      return getBranchStatus({ repo: repoOf(request.target), branch: request.target.branch });
+    case 'checkout:start': {
+      const { target } = request;
+      return startCheckout(
+        {
+          repo: repoOf(target),
+          folder: request.folder,
+          branch: target.branch,
+          pullNumber: target.number,
+          fork: target.fork,
+        },
+        { openUrl: tabUrlOpener(sender) },
+      );
+    }
+    case 'checkout:focus':
+      return focusFolder({ folder: request.folder }, { openUrl: tabUrlOpener(sender) });
     case 'companion-status':
       return getCompanionStatus();
     case 'companion:get-settings':
@@ -140,6 +153,20 @@ async function handleRequest(
         request.people,
       );
   }
+}
+
+/** Opens `cursor://` launch URLs from the requesting tab. */
+function tabUrlOpener(sender: Browser.runtime.MessageSender): (url: string) => Promise<void> {
+  const tabId = sender.tab?.id;
+  return async (url) => {
+    if (tabId !== undefined) {
+      await browser.tabs.update(tabId, { url });
+    }
+  };
+}
+
+function repoOf(target: { owner: string; repository: string }): string {
+  return `${target.owner}/${target.repository}`;
 }
 
 async function requireToken(): Promise<string> {

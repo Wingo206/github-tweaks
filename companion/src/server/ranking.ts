@@ -72,7 +72,7 @@ export function windowCandidates<W extends FocusableWindow>(windows: W[]): RankC
 export function cloneCandidates(clones: RememberedClone[]): RankCandidate<RememberedClone>[] {
   return clones.map((clone) => ({
     item: clone,
-    folder: { path: clone.path, remotes: clone.remotes, branch: null, upstreamBranch: null },
+    folder: { path: clone.path, remotes: clone.remotes, branch: null, upstreamBranch: null, workingTree: null },
     recency: clone.lastSeenAt,
   }));
 }

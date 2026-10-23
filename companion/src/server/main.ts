@@ -5,6 +5,8 @@ import { PortInUseError, startServer } from './server';
 
 const IDLE_MS = 10 * 60_000;
 const OPEN_TIMEOUT_MS = 5_000;
+// Stays under the browser's 10-second request timeout.
+const CHECKOUT_TIMEOUT_MS = 8_000;
 
 function log(message: string): void {
   process.stderr.write(`${new Date().toISOString()} ${message}\n`);
@@ -20,6 +22,7 @@ async function main(): Promise<void> {
       'config-dir': { type: 'string' },
       'idle-ms': { type: 'string' },
       'open-timeout-ms': { type: 'string' },
+      'checkout-timeout-ms': { type: 'string' },
       'no-focus': { type: 'boolean', default: false },
     },
   });
@@ -41,6 +44,9 @@ async function main(): Promise<void> {
       configDir: values['config-dir'] ?? defaultConfigDir(),
       idleMs: values['idle-ms'] ? Number(values['idle-ms']) : IDLE_MS,
       openTimeoutMs: values['open-timeout-ms'] ? Number(values['open-timeout-ms']) : OPEN_TIMEOUT_MS,
+      checkoutTimeoutMs: values['checkout-timeout-ms']
+        ? Number(values['checkout-timeout-ms'])
+        : CHECKOUT_TIMEOUT_MS,
       focus: values['no-focus'] ? new NoopFocusHelper(log) : new PowerShellFocusHelper(log),
       log,
     });

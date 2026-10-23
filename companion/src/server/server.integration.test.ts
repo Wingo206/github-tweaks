@@ -162,15 +162,18 @@ function clone(name: string, branch: string): FolderState {
   const path = join(root, 'clones', name);
   mkdirSync(join(path, 'src'), { recursive: true });
   writeFileSync(join(path, 'src', 'a.ts'), 'x\n');
-  return { path, remotes: [remote], branch, upstreamBranch: branch };
+  return { path, remotes: [remote], branch, upstreamBranch: branch, workingTree: CLEAN };
 }
+
+const CLEAN = { staged: 0, modified: 0, conflicts: 0, rebasing: false };
 
 async function post(
   server: ServerProcess,
   body: unknown,
   headers: Record<string, string> = {},
+  path = '/open',
 ): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(`http://127.0.0.1:${server.port}/open`, {
+  const response = await fetch(`http://127.0.0.1:${server.port}${path}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${server.token()}`,
@@ -306,6 +309,74 @@ describe('companion server', () => {
     expect(launched.received).toEqual([
       expect.objectContaining({ type: 'open', path: join(remembered.path, 'src/a.ts'), line: 9 }),
     ]);
+  });
+
+  it('reports branch status and starts checkouts in the chosen window', async () => {
+    const repo = 'github.com/acme/checkout';
+    const onBranch: FolderState = { ...clone('co-on-branch', 'feat/y'), remotes: [repo] };
+    const clean: FolderState = { ...clone('co-clean', 'main'), remotes: [repo] };
+    const dirty: FolderState = {
+      ...clone('co-dirty', 'main'),
+      remotes: [repo],
+      workingTree: { ...CLEAN, modified: 2 },
+    };
+    const cleanWindow = new FakeWindow(server.socketPath, (message) =>
+      message.type === 'checkout' ? { type: 'checkout-started', requestId: message.requestId, ok: true } : null,
+    )
+      .hello('w-co-clean')
+      .state([clean], false);
+    windows.push(
+      cleanWindow,
+      new FakeWindow(server.socketPath, () => null).hello('w-co-branch').state([onBranch], false),
+      new FakeWindow(server.socketPath, () => null).hello('w-co-dirty').state([dirty], false),
+    );
+    await new Promise((done) => setTimeout(done, 100));
+
+    const status = await post(server, { repo: 'acme/checkout', branch: 'feat/y' }, {}, '/branch-status');
+    expect(status.body).toMatchObject({
+      clones: expect.arrayContaining([
+        { path: onBranch.path, branch: 'feat/y', checkedOut: true, blocker: null },
+        { path: clean.path, branch: 'main', checkedOut: false, blocker: null },
+        {
+          path: dirty.path,
+          branch: 'main',
+          checkedOut: false,
+          blocker: { kind: 'changes', staged: 0, modified: 2, conflicts: 0 },
+        },
+      ]),
+    });
+
+    const command = { repo: 'acme/checkout', branch: 'feat/y', pullNumber: 7, fork: false };
+    expect((await post(server, { ...command, folder: clean.path }, {}, '/checkout')).body).toEqual({
+      status: 'started',
+      folder: clean.path,
+      launchUrl: `cursor://vscode-remote/wsl+ubuntu${clean.path}`,
+    });
+    expect(cleanWindow.received).toContainEqual({
+      type: 'checkout',
+      requestId: expect.any(String),
+      path: clean.path,
+      ...command,
+    });
+    expect((await post(server, { ...command, folder: dirty.path }, {}, '/checkout')).body).toEqual({
+      status: 'blocked',
+      folder: dirty.path,
+      blocker: { kind: 'changes', staged: 0, modified: 2, conflicts: 0 },
+    });
+    expect((await post(server, { ...command, folder: onBranch.path }, {}, '/checkout')).body).toMatchObject({
+      status: 'checked-out',
+      folder: onBranch.path,
+    });
+    expect((await post(server, { ...command, folder: '/not/open' }, {}, '/checkout')).body).toEqual({
+      status: 'not-open',
+      folder: '/not/open',
+    });
+    expect((await post(server, { ...command, branch: 'a;b', folder: clean.path }, {}, '/checkout')).status).toBe(400);
+
+    expect((await post(server, { folder: clean.path }, {}, '/focus')).body).toEqual({
+      status: 'launch',
+      launchUrl: `cursor://vscode-remote/wsl+ubuntu${clean.path}`,
+    });
   });
 
   it('exits when another server already owns the socket', async () => {

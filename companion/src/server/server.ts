@@ -4,15 +4,23 @@ import { createServer as createHttpServer, type Server as HttpServer } from 'nod
 import { createConnection, createServer as createSocketServer, type Server, type Socket } from 'node:net';
 import { join } from 'node:path';
 import {
+  checkoutBlocker,
   compareVersions,
   encodeMessage,
+  isCheckedOut,
   LineDecoder,
   parseWindowMessage,
+  type CheckoutRequest,
+  type CheckoutResponse,
+  type FocusRequest,
+  type FocusResponse,
   type FolderState,
   type OpenRequest,
   type OpenResponse,
+  type ServerMessage,
   type WindowMessage,
 } from '../protocol';
+import { branchStatus, findFolder } from './checkout';
 import { loadClones, loadOrCreateToken, saveClones } from './config';
 import type { FocusHelper } from './focus';
 import { createHttpHandler } from './http';
@@ -28,6 +36,8 @@ export interface ServerOptions {
   configDir: string;
   idleMs: number;
   openTimeoutMs: number;
+  /** Covers the window's git status refresh before it starts the checkout. */
+  checkoutTimeoutMs: number;
   focus: FocusHelper;
   log(message: string): void;
 }
@@ -40,11 +50,11 @@ export interface RunningServer {
 
 export class PortInUseError extends Error {}
 
-type OpenResult = { ok: true } | { ok: false; error: string } | null;
+type WindowResult = { ok: true } | { ok: false; error: string } | null;
 
-interface PendingOpen {
+interface PendingRequest {
   entry: WindowEntry;
-  resolve(result: OpenResult): void;
+  resolve(result: WindowResult): void;
 }
 
 /** Returns true when a live companion server is listening on `socketPath`. */
@@ -78,7 +88,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
   });
   const launches = new LaunchQueue();
-  const pending = new Map<string, PendingOpen>();
+  const pending = new Map<string, PendingRequest>();
   const sockets = new Set<Socket>();
   let idleTimer: NodeJS.Timeout | null = null;
   let stopping = false;
@@ -95,19 +105,18 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
           .join('/')}`
       : null;
 
-  const deliver = async (
+  /** Sends a request to a window and waits for its reply; null on timeout. */
+  const ask = (
     entry: WindowEntry,
-    folder: FolderState,
-    request: OpenRequest,
-    matchedBranch: boolean,
-  ): Promise<OpenResponse> => {
+    timeoutMs: number,
+    build: (requestId: string) => ServerMessage,
+  ): Promise<WindowResult> => {
     const requestId = randomUUID();
-    const path = join(folder.path, request.path);
-    const result = await new Promise<OpenResult>((resolve) => {
+    return new Promise<WindowResult>((resolve) => {
       const timer = setTimeout(() => {
         pending.delete(requestId);
         resolve(null);
-      }, options.openTimeoutMs);
+      }, timeoutMs);
       pending.set(requestId, {
         entry,
         resolve: (value) => {
@@ -116,8 +125,35 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
           resolve(value);
         },
       });
-      entry.send({ type: 'open', requestId, path, line: request.line, column: request.column });
+      entry.send(build(requestId));
     });
+  };
+
+  const raise = async (entry: WindowEntry): Promise<boolean> => {
+    if (!entry.hwnd) {
+      return false;
+    }
+    const raised = await options.focus.raise(entry.hwnd);
+    if (!raised.ok) {
+      log(`raise ${entry.hwnd} (${entry.windowId}) failed: ${raised.reason}`);
+    }
+    return raised.ok;
+  };
+
+  const deliver = async (
+    entry: WindowEntry,
+    folder: FolderState,
+    request: OpenRequest,
+    matchedBranch: boolean,
+  ): Promise<OpenResponse> => {
+    const path = join(folder.path, request.path);
+    const result = await ask(entry, options.openTimeoutMs, (requestId) => ({
+      type: 'open',
+      requestId,
+      path,
+      line: request.line,
+      column: request.column,
+    }));
 
     if (result === null) {
       log(`open ${path}: timed out in ${entry.windowId}`);
@@ -127,14 +163,55 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       log(`open ${path}: failed in ${entry.windowId}: ${result.error}`);
       return { status: 'error', reason: 'open-failed', message: result.error };
     }
-    if (entry.hwnd) {
-      const raised = await options.focus.raise(entry.hwnd);
-      if (!raised.ok) {
-        log(`raise ${entry.hwnd} (${entry.windowId}) failed: ${raised.reason}`);
-      }
-    }
+    await raise(entry);
     log(`open ${path}:${request.line}: opened in ${entry.windowId}`);
     return { status: 'opened', folder: folder.path, matchedBranch, launchUrl: launchUrl(folder.path) };
+  };
+
+  const checkout = async (request: CheckoutRequest): Promise<CheckoutResponse> => {
+    const target = findFolder(registry.list(), request.folder);
+    if (!target || !target.folder.remotes.includes(`github.com/${request.repo}`.toLowerCase())) {
+      return { status: 'not-open', folder: request.folder };
+    }
+    const { window: entry, folder } = target;
+    if (isCheckedOut(folder, request.branch)) {
+      const raised = await raise(entry);
+      return { status: 'checked-out', folder: folder.path, launchUrl: raised ? null : launchUrl(folder.path) };
+    }
+    const blocker = checkoutBlocker(folder);
+    if (blocker) {
+      return { status: 'blocked', folder: folder.path, blocker };
+    }
+    const { folder: _folder, ...command } = request;
+    const result = await ask(entry, options.checkoutTimeoutMs, (requestId) => ({
+      type: 'checkout',
+      requestId,
+      path: folder.path,
+      ...command,
+    }));
+    if (result === null) {
+      log(`checkout ${request.branch} in ${folder.path}: timed out in ${entry.windowId}`);
+      return { status: 'error', reason: 'timeout', message: 'Cursor did not confirm the checkout in time.' };
+    }
+    if (!result.ok) {
+      log(`checkout ${request.branch} in ${folder.path}: failed in ${entry.windowId}: ${result.error}`);
+      return { status: 'error', reason: 'checkout-failed', message: result.error };
+    }
+    const raised = await raise(entry);
+    log(`checkout ${request.branch} in ${folder.path}: started in ${entry.windowId}`);
+    return { status: 'started', folder: folder.path, launchUrl: raised ? null : launchUrl(folder.path) };
+  };
+
+  const focusFolder = async (request: FocusRequest): Promise<FocusResponse> => {
+    const target = findFolder(registry.list(), request.folder);
+    if (!target) {
+      return { status: 'not-open', folder: request.folder };
+    }
+    if (await raise(target.window)) {
+      return { status: 'focused' };
+    }
+    const url = launchUrl(target.folder.path);
+    return url ? { status: 'launch', launchUrl: url } : { status: 'not-open', folder: request.folder };
   };
 
   const open = async (request: OpenRequest): Promise<OpenResponse> => {
@@ -230,7 +307,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
         }
         return current;
       }
-      case 'opened': {
+      case 'opened':
+      case 'checkout-started': {
         const waiting = pending.get(message.requestId);
         if (waiting && waiting.entry === current) {
           waiting.resolve(message.ok ? { ok: true } : { ok: false, error: message.error });
@@ -276,6 +354,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       version: options.version,
       windowCount: () => registry.size,
       open,
+      branchStatus: async (request) => branchStatus(registry.list(), request),
+      checkout,
+      focus: focusFolder,
       log,
     }),
   );
