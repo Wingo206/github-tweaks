@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { loadPullRequestFiles } from './pullRequestFiles';
+import { loadPullRequestFiles, setFileViewed } from './pullRequestFiles';
 
 function jsonResponse(data: unknown): Response {
   return {
@@ -194,5 +194,26 @@ describe('GitHub pull request files API', () => {
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain(
       '/compare/parent-of-start...1234567',
     );
+  });
+
+  it('marks and unmarks a file as viewed', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ pullRequest: { id: 'PR_1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await setFileViewed('token', 'PR_1', 'src/a.ts', true);
+    await setFileViewed('token', 'PR_1', 'src/a.ts', false);
+
+    const bodies = fetchMock.mock.calls.map(
+      ([, init]) =>
+        JSON.parse(String((init as RequestInit).body)) as {
+          query: string;
+          variables: Record<string, unknown>;
+        },
+    );
+    expect(bodies[0]?.query).toContain('markFileAsViewed');
+    expect(bodies[1]?.query).toContain('unmarkFileAsViewed');
+    expect(bodies[0]?.variables).toEqual({ pullRequestId: 'PR_1', path: 'src/a.ts' });
   });
 });

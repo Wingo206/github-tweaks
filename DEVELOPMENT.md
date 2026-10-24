@@ -81,10 +81,21 @@ execution contexts:
    fresh snapshot, and returns it.
 4. The content controller reconciles the snapshot against the current React
    file tree.
-5. Sidebar Viewed changes are optimistic. The background worker performs the
-   mutation; failures roll back to the last confirmed state.
+5. Sidebar Viewed changes are optimistic and keep GitHub's page state current.
+   On large pull requests GitHub loads diffs progressively, and a file has no
+   native Viewed button until its diff loads. GitHub also never re-reads
+   Viewed state when a diff loads.
+   - If the file's native button is loaded, the controller clicks it, and
+     GitHub performs the mutation.
+   - Otherwise the background worker performs the GraphQL mutation. When
+     GitHub later renders that file's button with the stale state, the
+     controller clicks it so GitHub's page and counter catch up.
+   - Failed mutations roll back to the last confirmed state and flag the row.
 6. Native GitHub Viewed changes update the same in-memory model and trigger a
-   delayed re-fetch without issuing a duplicate mutation.
+   delayed re-fetch without issuing a duplicate mutation. GitHub's API shows a
+   native click up to ~1.5 s after the page does, so re-fetched snapshots take
+   Viewed state from loaded native buttons and use the API only for unloaded
+   files.
 
 The token must remain in the background/storage layer. Do not return it from a
 message or import token storage into a content feature.
@@ -193,7 +204,8 @@ Viewed synchronization, and rendering against sanitized markup.
 
 The Playwright test builds and loads the real unpacked extension. It fulfills a
 GitHub fixture page and GraphQL calls locally, then verifies metadata rendering
-and a Viewed mutation without requiring credentials. The Open in Cursor flow
+and a Viewed mutation for a file whose diff has not loaded, without requiring
+credentials. The Open in Cursor flow
 runs against a fake companion HTTP server.
 
 Companion tests run in Vitest's Node environment (`companion/**/*.test.ts`).
@@ -225,6 +237,9 @@ Before releasing a change:
 - open a private PR and verify every file receives counts immediately
 - check a PR with more than 100 files to exercise pagination
 - toggle Viewed from the sidebar and from GitHub's native control
+- on a PR with several hundred files, check a file near the bottom from the
+  sidebar before its diff loads, then confirm GitHub's button and
+  "N / M viewed" counter catch up once it loads
 - confirm folder line counts decrease as descendant files are viewed
 - force a mutation failure and confirm optimistic rollback and local feedback
 - filter files and confirm directory totals still cover all descendants

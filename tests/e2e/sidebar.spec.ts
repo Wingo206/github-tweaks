@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
 
-test('renders metadata with read-only Viewed indicators', async () => {
+test('renders metadata and marks unloaded files Viewed through GraphQL', async () => {
   const extensionPath = resolve(process.cwd(), '.output/chrome-mv3');
   const sidebar = readFileSync(
     resolve(process.cwd(), 'tests/fixtures/sidebar.html'),
     'utf8',
   );
-  const diffs = readFileSync(
-    resolve(process.cwd(), 'tests/fixtures/file-diff.html'),
+  const loadingDiff = readFileSync(
+    resolve(process.cwd(), 'tests/fixtures/file-diff-loading.html'),
     'utf8',
   );
   const context = await chromium.launchPersistentContext('', {
@@ -21,6 +21,7 @@ test('renders metadata with read-only Viewed indicators', async () => {
     ],
   });
 
+  const viewedMutations: Array<Record<string, unknown>> = [];
   await context.route('https://api.github.com/graphql', async (route) => {
     const request = route.request();
     const payload = request.postDataJSON() as {
@@ -62,6 +63,17 @@ test('renders metadata with read-only Viewed indicators', async () => {
       return;
     }
 
+    if (payload.query.includes('markFileAsViewed')) {
+      viewedMutations.push(payload.variables);
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: { markFileAsViewed: { pullRequest: { id: 'PR_1' } } },
+        }),
+      });
+      return;
+    }
+
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ data: { viewer: { login: 'test-user' } } }),
@@ -73,7 +85,7 @@ test('renders metadata with read-only Viewed indicators', async () => {
     async (route) => {
       await route.fulfill({
         contentType: 'text/html',
-        body: `<!doctype html><html><body>${sidebar}${diffs}</body></html>`,
+        body: `<!doctype html><html><body>${sidebar}${loadingDiff}</body></html>`,
       });
     },
   );
@@ -102,13 +114,21 @@ test('renders metadata with read-only Viewed indicators', async () => {
 
     const indexViewed = indexRow.locator('input[type="checkbox"]');
     await expect(indexViewed).toBeVisible();
-    await expect(indexViewed).toBeDisabled();
+    await expect(indexViewed).toBeEnabled();
     await expect(indexViewed).not.toBeChecked();
     const binaryViewed = page.locator(
       '[id="src/empty.png"] input[type="checkbox"]',
     );
-    await expect(binaryViewed).toBeDisabled();
     await expect(binaryViewed).toBeChecked();
+
+    await indexViewed.click();
+    await expect(indexViewed).toBeChecked();
+    await expect(
+      page.locator('[id="src"] .ght-pr-metadata__progress'),
+    ).toHaveText('2/2');
+    await expect.poll(() => viewedMutations).toEqual([
+      { pullRequestId: 'PR_1', path: 'src/index.ts' },
+    ]);
   } finally {
     await context.close();
   }

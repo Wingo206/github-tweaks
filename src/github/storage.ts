@@ -54,6 +54,28 @@ export async function cachePullRequest(
   });
 }
 
+export async function updateCachedViewedState(
+  ref: PullRequestRef,
+  selection: PullRequestChangeSelection,
+  pullRequestId: string,
+  path: string,
+  viewed: boolean,
+): Promise<void> {
+  const cached = await getCachedPullRequest(ref, selection);
+  if (!cached || cached.pullRequestId !== pullRequestId) {
+    return;
+  }
+
+  await cachePullRequest({
+    ...cached,
+    files: cached.files.map((file) =>
+      file.path === path
+        ? { ...file, viewedState: viewed ? 'VIEWED' : 'UNVIEWED' }
+        : file,
+    ),
+  });
+}
+
 const PINS_PREFIX = 'people-pins:';
 
 export function peoplePinsKey(owner: string, repository: string): string {

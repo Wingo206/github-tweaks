@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   getNativeViewedPath,
+  indexNativeViewedButtons,
   isNativeViewedButton,
   SidebarRenderer,
 } from './dom';
@@ -14,6 +15,14 @@ const sidebarFixture = readFileSync(
 );
 const diffFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/file-diff.html'),
+  'utf8',
+);
+const loadingDiffFixture = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/file-diff-loading.html'),
+  'utf8',
+);
+const renamedDiffFixture = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/file-diff-renamed.html'),
   'utf8',
 );
 const toolbarFixture = readFileSync(
@@ -51,6 +60,7 @@ describe('GitHub DOM adapter and renderer', () => {
   it('renders file metadata and stable folder totals idempotently', () => {
     document.body.innerHTML = sidebarFixture;
     const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -68,7 +78,7 @@ describe('GitHub DOM adapter and renderer', () => {
         '.ght-pr-metadata__viewed input',
       )!;
     expect(fileIndicator.checked).toBe(false);
-    expect(fileIndicator.disabled).toBe(true);
+    expect(fileIndicator.disabled).toBe(false);
 
     const binaryRow = document.getElementById('src/empty.png')!;
     expect(
@@ -79,7 +89,7 @@ describe('GitHub DOM adapter and renderer', () => {
         '.ght-pr-metadata__viewed input',
       )!;
     expect(binaryIndicator.checked).toBe(true);
-    expect(binaryIndicator.disabled).toBe(true);
+    expect(binaryIndicator.disabled).toBe(false);
     expect(binaryRow.classList.contains('ght-pr-tree-row--viewed')).toBe(true);
     expect(fileRow.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
 
@@ -115,6 +125,7 @@ describe('GitHub DOM adapter and renderer', () => {
   it('replaces folder totals when a commit filter shrinks the file set', () => {
     document.body.innerHTML = sidebarFixture;
     const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -197,6 +208,7 @@ describe('GitHub DOM adapter and renderer', () => {
   it('appends combined line progress beside the toolbar viewed meter', () => {
     document.body.innerHTML = toolbarFixture;
     const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -262,6 +274,7 @@ describe('GitHub DOM adapter and renderer', () => {
   it('renders line progress when a commit range hides native progress', () => {
     document.body.innerHTML = rangeToolbarFixture;
     const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
@@ -283,5 +296,78 @@ describe('GitHub DOM adapter and renderer', () => {
 
     expect(isNativeViewedButton(button)).toBe(true);
     expect(getNativeViewedPath(button)).toBe('src/index.ts');
+  });
+
+  it('maps a renamed file without data-file-path to its new path', () => {
+    document.body.innerHTML = renamedDiffFixture;
+
+    expect([...indexNativeViewedButtons().keys()]).toEqual(['lib/new-name.ts']);
+  });
+
+  it('prefers the tree row linked to a diff anchor', () => {
+    document.body.innerHTML =
+      `<div id="pr-file-tree"><ul role="tree"><li role="treeitem" id="lib/tree-name.ts">` +
+      `<a href="#diff-file-renamed">tree-name.ts</a></li></ul></div>` +
+      renamedDiffFixture;
+
+    expect([...indexNativeViewedButtons().keys()]).toEqual(['lib/tree-name.ts']);
+  });
+
+  it('indexes loaded native Viewed buttons and skips files still loading', () => {
+    document.body.innerHTML =
+      loadingDiffFixture +
+      diffFixture.slice(diffFixture.indexOf('<div role="region" id="diff-file-two"'));
+
+    const buttons = indexNativeViewedButtons();
+
+    expect([...buttons.keys()]).toEqual(['src/empty.png']);
+    expect(buttons.get('src/empty.png')?.getAttribute('aria-label')).toBe('Viewed');
+  });
+
+  it('reports checkbox changes without activating the tree row', () => {
+    document.body.innerHTML = sidebarFixture;
+    const onViewedChange = vi.fn();
+    const renderer = new SidebarRenderer({
+      onViewedChange,
+      onRetry: vi.fn(),
+      onOpenSetup: vi.fn(),
+    });
+    renderer.render(snapshot);
+    const row = document.getElementById('src/index.ts')!;
+    const rowClick = vi.fn();
+    row.addEventListener('click', rowClick);
+
+    row.querySelector<HTMLInputElement>('.ght-pr-metadata__viewed input')!.click();
+
+    expect(onViewedChange).toHaveBeenCalledWith('src/index.ts', true);
+    expect(rowClick).not.toHaveBeenCalled();
+
+    row.querySelector<HTMLElement>('label.ght-pr-metadata__viewed')!.click();
+
+    expect(onViewedChange).toHaveBeenLastCalledWith('src/index.ts', false);
+    expect(rowClick).not.toHaveBeenCalled();
+  });
+
+  it('shows a viewed error on the row until it is cleared', () => {
+    document.body.innerHTML = sidebarFixture;
+    const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
+      onRetry: vi.fn(),
+      onOpenSetup: vi.fn(),
+    });
+    const metadata = () =>
+      document.getElementById('src/index.ts')!.querySelector<HTMLElement>(
+        '.ght-pr-metadata',
+      )!;
+
+    renderer.setViewedError('src/index.ts', 'Token is read-only');
+    renderer.render(snapshot);
+    expect(metadata().classList).toContain('ght-pr-metadata--error');
+    expect(metadata().querySelector('label')?.title).toBe('Token is read-only');
+
+    renderer.setViewedError('src/index.ts', null);
+    renderer.render(snapshot);
+    expect(metadata().classList).not.toContain('ght-pr-metadata--error');
+    expect(metadata().querySelector('label')?.title).toBe('Mark file as viewed');
   });
 });

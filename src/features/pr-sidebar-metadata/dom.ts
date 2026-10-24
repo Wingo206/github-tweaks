@@ -17,12 +17,23 @@ const PROGRESS_RING_CIRCUMFERENCE = 38;
 const numberFormatter = new Intl.NumberFormat();
 
 export interface SidebarCallbacks {
+  onViewedChange(path: string, viewed: boolean): void;
   onRetry(): void;
   onOpenSetup(): void;
 }
 
 export class SidebarRenderer {
+  private readonly viewedErrors = new Map<string, string>();
+
   constructor(private readonly callbacks: SidebarCallbacks) {}
+
+  setViewedError(path: string, message: string | null): void {
+    if (message) {
+      this.viewedErrors.set(path, message);
+    } else {
+      this.viewedErrors.delete(path);
+    }
+  }
 
   render(snapshot: PullRequestFilesSnapshot): boolean {
     this.renderToolbarLineProgress(aggregateLineViewProgress(snapshot.files));
@@ -195,10 +206,24 @@ export class SidebarRenderer {
       metadata.setAttribute(METADATA_ATTRIBUTE, 'file');
       metadata.innerHTML = `
         <span class="ght-pr-metadata__counts"></span>
-        <span class="ght-pr-metadata__viewed" title="Viewed state is controlled by GitHub">
-          <input type="checkbox" disabled tabindex="-1">
-        </span>
+        <label class="ght-pr-metadata__viewed">
+          <input type="checkbox">
+        </label>
       `;
+      // Keep checkbox clicks and keys from also activating the tree row.
+      metadata.addEventListener('click', (event) => event.stopPropagation());
+      metadata.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.stopPropagation();
+        }
+      });
+      const checkbox = metadata.querySelector<HTMLInputElement>('input');
+      checkbox?.addEventListener('change', () => {
+        const path = checkbox.closest<HTMLElement>('li[role="treeitem"]')?.id;
+        if (path) {
+          this.callbacks.onViewedChange(path, checkbox.checked);
+        }
+      });
       container.append(metadata);
     }
 
@@ -209,16 +234,20 @@ export class SidebarRenderer {
       renderCounts(counts, file.additions, file.deletions);
     }
 
-    const viewedIndicator =
-      metadata.querySelector<HTMLInputElement>(
-        '.ght-pr-metadata__viewed input',
-      );
-    if (viewedIndicator) {
-      viewedIndicator.checked = isViewed(file.viewedState);
-      viewedIndicator.setAttribute(
+    const error = this.viewedErrors.get(file.path);
+    metadata.classList.toggle('ght-pr-metadata--error', !!error);
+    const checkbox = metadata.querySelector<HTMLInputElement>(
+      '.ght-pr-metadata__viewed input',
+    );
+    if (checkbox) {
+      checkbox.checked = isViewed(file.viewedState);
+      checkbox.setAttribute(
         'aria-label',
-        `${file.path} is ${viewedIndicator.checked ? 'viewed' : 'not viewed'}`,
+        `${checkbox.checked ? 'Unmark' : 'Mark'} ${file.path} as viewed`,
       );
+      checkbox.parentElement!.title =
+        error ??
+        (checkbox.checked ? 'Unmark file as viewed' : 'Mark file as viewed');
     }
   }
 
@@ -341,11 +370,56 @@ export function getNativeViewedPath(button: HTMLButtonElement): string | null {
     return explicitPath;
   }
 
-  const text = header
-    ?.querySelector('h3 a[href^="#diff-"] code')
+  const link = header?.querySelector<HTMLAnchorElement>('h3 a[href^="#diff-"]');
+  const treePath = link
+    ? document
+        .querySelector(`#pr-file-tree a[href="${link.getAttribute('href')}"]`)
+        ?.closest<HTMLElement>('li[role="treeitem"]')?.id
+    : undefined;
+  if (treePath) {
+    return treePath;
+  }
+
+  // Renamed files show both paths; the screen-reader text spells out the new one.
+  const renamed = link
+    ?.querySelector('code .sr-only')
+    ?.textContent?.match(/ renamed to (.+)$/)?.[1]
+    ?.trim();
+  if (renamed) {
+    return renamed;
+  }
+
+  const text = link
+    ?.querySelector('code')
     ?.textContent?.replace(/[\u200e\u200f]/g, '')
     .trim();
   return text || null;
+}
+
+export function isNativeViewedPressed(button: HTMLButtonElement): boolean {
+  return button.getAttribute('aria-pressed') === 'true';
+}
+
+/**
+ * Native Viewed buttons keyed by file path. GitHub only renders a file's
+ * button once its diff has loaded, so unloaded files are absent.
+ */
+export function indexNativeViewedButtons(
+  doc: Document = document,
+): Map<string, HTMLButtonElement> {
+  const buttons = new Map<string, HTMLButtonElement>();
+  for (const button of doc.querySelectorAll<HTMLButtonElement>(
+    '[data-diff-header-wrapper="true"] button[aria-pressed]',
+  )) {
+    if (!isNativeViewedButton(button)) {
+      continue;
+    }
+    const path = getNativeViewedPath(button);
+    if (path) {
+      buttons.set(path, button);
+    }
+  }
+  return buttons;
 }
 
 function findViewedProgressMount(): HTMLElement | null {

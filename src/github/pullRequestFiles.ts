@@ -39,6 +39,22 @@ const FILES_QUERY = `
   }
 `;
 
+const MARK_VIEWED_MUTATION = `
+  mutation MarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+    markFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+      pullRequest { id }
+    }
+  }
+`;
+
+const UNMARK_VIEWED_MUTATION = `
+  mutation UnmarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+    unmarkFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+      pullRequest { id }
+    }
+  }
+`;
+
 interface FilesQueryData {
   repository: {
     pullRequest: {
@@ -125,6 +141,19 @@ export async function loadPullRequestFiles(
         'UNVIEWED',
     })),
   };
+}
+
+export async function setFileViewed(
+  token: string,
+  pullRequestId: string,
+  path: string,
+  viewed: boolean,
+): Promise<void> {
+  await graphql(
+    token,
+    viewed ? MARK_VIEWED_MUTATION : UNMARK_VIEWED_MUTATION,
+    { pullRequestId, path },
+  );
 }
 
 async function loadWholePullRequestFiles(

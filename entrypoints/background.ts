@@ -6,13 +6,17 @@ import {
   removeToken,
   savePeoplePins,
   saveToken,
+  updateCachedViewedState,
 } from '../src/github/storage';
 import { validateToken } from '../src/github/graphql';
 import {
   handbackAssignee,
   loadHandbackContext,
 } from '../src/github/pullRequestAssignees';
-import { loadPullRequestFiles } from '../src/github/pullRequestFiles';
+import {
+  loadPullRequestFiles,
+  setFileViewed,
+} from '../src/github/pullRequestFiles';
 import { loadPullRequestContext } from '../src/github/pullRequestContext';
 import {
   focusFolder,
@@ -135,6 +139,23 @@ async function handleRequest(
       );
       await cachePullRequest(snapshot);
       return snapshot;
+    }
+    case 'pull:set-viewed': {
+      const token = await requireToken();
+      await setFileViewed(
+        token,
+        request.pullRequestId,
+        request.path,
+        request.viewed,
+      );
+      await updateCachedViewedState(
+        request.ref,
+        request.selection,
+        request.pullRequestId,
+        request.path,
+        request.viewed,
+      );
+      return undefined;
     }
     case 'pull:handback-context': {
       const token = await requireToken();

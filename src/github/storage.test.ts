@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { getPeoplePins, savePeoplePins } from './storage';
-import type { PinnedPerson } from '../shared/types';
+import {
+  cachePullRequest,
+  getCachedPullRequest,
+  getPeoplePins,
+  savePeoplePins,
+  updateCachedViewedState,
+} from './storage';
+import type { PinnedPerson, PullRequestFilesSnapshot } from '../shared/types';
 
 const ben: PinnedPerson = {
   id: '22',
@@ -41,5 +47,37 @@ describe('people pin storage', () => {
     ]);
 
     await expect(getPeoplePins('acme', 'widgets')).resolves.toEqual([ada]);
+  });
+});
+
+describe('pull request cache', () => {
+  const snapshot: PullRequestFilesSnapshot = {
+    ref: { owner: 'acme', repository: 'widgets', number: 42 },
+    selection: { kind: 'all' },
+    pullRequestId: 'PR_1',
+    headOid: 'head',
+    savedAt: 1,
+    files: [
+      { path: 'src/a.ts', additions: 1, deletions: 0, viewedState: 'UNVIEWED' },
+      { path: 'src/b.ts', additions: 2, deletions: 0, viewedState: 'UNVIEWED' },
+    ],
+  };
+
+  it('updates one file’s viewed state in the cached snapshot', async () => {
+    await cachePullRequest(snapshot);
+
+    await updateCachedViewedState(snapshot.ref, snapshot.selection, 'PR_1', 'src/a.ts', true);
+
+    const cached = await getCachedPullRequest(snapshot.ref, snapshot.selection);
+    expect(cached?.files.map((file) => file.viewedState)).toEqual(['VIEWED', 'UNVIEWED']);
+  });
+
+  it('leaves a cache for a different pull request id alone', async () => {
+    await cachePullRequest(snapshot);
+
+    await updateCachedViewedState(snapshot.ref, snapshot.selection, 'PR_other', 'src/a.ts', true);
+
+    const cached = await getCachedPullRequest(snapshot.ref, snapshot.selection);
+    expect(cached?.files[0]?.viewedState).toBe('UNVIEWED');
   });
 });

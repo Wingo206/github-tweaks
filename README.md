@@ -16,7 +16,8 @@ GitHub tab.
 On a pull request's changed-files page, GitHub Tweaks adds:
 
 - per-file additions and deletions (`+X -Y`) to the file tree
-- a read-only Viewed indicator synchronized with GitHub's native control
+- a Viewed checkbox synchronized with GitHub's native control, including files
+  whose diffs have not loaded yet
 - dimmed file rows after they are marked Viewed, including completed folders
 - remaining unviewed line counts and `viewed/total` progress on directory rows
 - `X / N changes` line progress with a circular meter beside the sticky file viewed control

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateFolder,
+  applyViewedOverrides,
   aggregateLineViewProgress,
   formatLineViewProgressLabel,
   lineViewProgressRatio,
@@ -132,5 +133,24 @@ describe('pull request sidebar model', () => {
     const updated = updateFileViewedState(snapshot, 'src/index.ts', true);
     expect(updated.files[0]?.viewedState).toBe('VIEWED');
     expect(snapshot.files[0]?.viewedState).toBe('UNVIEWED');
+  });
+});
+
+describe('viewed overrides', () => {
+  it('applies sidebar choices over a fetched snapshot', () => {
+    const result = applyViewedOverrides(
+      snapshot,
+      new Map([
+        ['src/index.ts', true],
+        ['src/components/button.ts', false],
+      ]),
+    );
+
+    expect(result.files.map((file) => file.viewedState)).toEqual([
+      'VIEWED',
+      'UNVIEWED',
+      'DISMISSED',
+    ]);
+    expect(applyViewedOverrides(snapshot, new Map())).toBe(snapshot);
   });
 });

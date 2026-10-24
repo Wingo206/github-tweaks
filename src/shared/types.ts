@@ -139,6 +139,14 @@ export type BackgroundRequest =
       ref: PullRequestRef;
       selection: PullRequestChangeSelection;
     }
+  | {
+      type: 'pull:set-viewed';
+      ref: PullRequestRef;
+      selection: PullRequestChangeSelection;
+      pullRequestId: string;
+      path: string;
+      viewed: boolean;
+    }
   | { type: 'pull:handback-context'; ref: PullRequestRef }
   | { type: 'pull:handback-assignee'; ref: PullRequestRef }
   | { type: 'pins:get'; owner: string; repository: string }

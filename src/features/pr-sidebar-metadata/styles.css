@@ -122,20 +122,39 @@
   font-weight: 400;
 }
 
+/* A 24px hit target around the 14px checkbox; the negative margin keeps the
+   row height and checkbox position unchanged. */
 .ght-pr-metadata__viewed {
   align-items: center;
+  border-radius: var(--borderRadius-medium, 6px);
+  cursor: pointer;
   display: inline-flex;
-  margin: 0;
+  margin: -5px;
+  padding: 5px;
+  transition: background-color 80ms ease;
+}
+
+.ght-pr-metadata__viewed:hover {
+  background-color: var(--control-transparent-bgColor-hover, rgba(129, 139, 152, 0.1));
+}
+
+.ght-pr-metadata__viewed:active {
+  background-color: var(--control-transparent-bgColor-active, rgba(129, 139, 152, 0.15));
 }
 
 .ght-pr-metadata__viewed input {
   accent-color: var(--bgColor-accent-emphasis, var(--color-accent-emphasis, #0969da));
-  cursor: default;
+  cursor: pointer;
   height: 14px;
   margin: 0;
-  opacity: 1;
-  pointer-events: none;
   width: 14px;
+}
+
+.ght-pr-metadata--error .ght-pr-metadata__viewed input {
+  border-radius: 3px;
+  outline: 2px solid
+    var(--borderColor-danger-emphasis, var(--color-danger-emphasis, #cf222e));
+  outline-offset: 1px;
 }
 
 .ght-pr-banner {

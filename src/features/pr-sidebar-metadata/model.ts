@@ -99,6 +99,24 @@ export function updateFileViewedState(
   };
 }
 
+export function applyViewedOverrides(
+  snapshot: PullRequestFilesSnapshot,
+  overrides: ReadonlyMap<string, boolean>,
+): PullRequestFilesSnapshot {
+  if (overrides.size === 0) {
+    return snapshot;
+  }
+  return {
+    ...snapshot,
+    files: snapshot.files.map((file) => {
+      const viewed = overrides.get(file.path);
+      return viewed === undefined
+        ? file
+        : { ...file, viewedState: viewed ? 'VIEWED' : 'UNVIEWED' };
+    }),
+  };
+}
+
 export function parsePullRequestUrl(url: URL) {
   const match = url.pathname.match(
     /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/(?:files|changes)(?:\/|$)/,
