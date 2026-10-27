@@ -132,6 +132,21 @@ status:
 The favicon follows the system light or dark theme. Other GitHub pages keep
 the normal favicon.
 
+### Tabs in the sticky header
+
+Once you scroll down a pull request, the header that sticks to the top of the
+page gets a compact copy of the **Conversation**, **Commits**, **Checks**, and
+**Files changed** tabs, right after the head branch name (and the check-out
+button). Counts and the current tab follow GitHub's own tab bar.
+
+- A click goes through GitHub's own tab link, so it navigates the same way.
+  Cmd/Ctrl-click and middle-click open the tab in a new browser tab.
+- Clicking the tab you are already on scrolls back to the top.
+
+On Files changed, GitHub only shows the branch summary while its toolbar is
+stuck and the window is wide enough, and the tabs appear and hide with it.
+GitHub's Checks page has no sticky header, so it gets no tabs.
+
 ## Install for local use
 
 Requirements: Node.js 20 or newer, pnpm, Chrome, and a GitHub fine-grained

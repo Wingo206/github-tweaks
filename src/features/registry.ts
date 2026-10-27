@@ -6,7 +6,8 @@ export type FeatureId =
   | 'pr-people-pins'
   | 'open-in-cursor'
   | 'pr-checkout-branch'
-  | 'pr-tab-favicon';
+  | 'pr-tab-favicon'
+  | 'pr-sticky-tabs';
 
 export interface FeatureDefinition {
   id: FeatureId;
@@ -64,6 +65,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'pr-tab-favicon',
     title: 'Pull request tab icons',
     description: 'Per-tab favicon for Conversation, Commits, Checks, and Files changed.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-sticky-tabs',
+    title: 'Tabs in the sticky header',
+    description: 'Conversation, Commits, Checks, and Files changed beside the branch name once you scroll.',
     defaultEnabled: true,
   },
 ];

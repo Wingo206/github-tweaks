@@ -1,32 +1,13 @@
+import { findHeadBranchMounts } from '../../shared/prHeader';
 import type { MenuEntry } from './model';
 
 export const MARKER = 'data-ght-checkout-branch';
 export const ACCESSIBLE_NAME = 'Check out branch locally';
 
-const COPY_HEAD_LABEL = 'Copy head branch name to clipboard';
-
 const CHECKOUT_ICON =
   '<svg aria-hidden="true" focusable="false" class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="m4.927 5.427 2.896 2.896a.25.25 0 0 0 .354 0l2.896-2.896A.25.25 0 0 0 10.896 5H8.75V.75a.75.75 0 1 0-1.5 0V5H5.104a.25.25 0 0 0-.177.427Z"></path><path d="M1.573 2.573a.25.25 0 0 0-.073.177v7.5a.25.25 0 0 0 .25.25h12.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25h-3a.75.75 0 1 1 0-1.5h3A1.75 1.75 0 0 1 16 2.75v7.5A1.75 1.75 0 0 1 14.25 12h-3.727c.099 1.041.52 1.872 1.292 2.757A.75.75 0 0 1 11.25 16h-6.5a.75.75 0 0 1-.565-1.243c.772-.885 1.192-1.716 1.292-2.757H1.75A1.75 1.75 0 0 1 0 10.25v-7.5A1.75 1.75 0 0 1 1.75 1h3a.75.75 0 0 1 0 1.5h-3a.25.25 0 0 0-.177.073ZM6.982 12a5.72 5.72 0 0 1-.765 2.5h3.566a5.72 5.72 0 0 1-.765-2.5H6.982Z"></path></svg>';
 const CHECK_ICON =
   '<svg aria-hidden="true" focusable="false" class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
-
-export interface HeadBranchMount {
-  /** The copy button's tooltip (or the button itself); ours goes after it. */
-  anchor: Element;
-  link: HTMLAnchorElement;
-}
-
-/** Head branch rows, found through GitHub's "Copy head branch name" control. */
-export function findHeadBranchMounts(root: ParentNode): HeadBranchMount[] {
-  const anchors = [
-    ...root.querySelectorAll(`[data-component="Tooltip"][aria-label="${COPY_HEAD_LABEL}"]`),
-    ...root.querySelectorAll(`button[aria-label="${COPY_HEAD_LABEL}"]`),
-  ];
-  return anchors.flatMap((anchor) => {
-    const link = anchor.parentElement?.querySelector<HTMLAnchorElement>('a[data-component="BranchName"]');
-    return link ? [{ anchor, link }] : [];
-  });
-}
 
 /** Inserts a button after each mount's anchor once; returns every button in `root`. */
 export function syncButtons(root: ParentNode, create: () => HTMLButtonElement): HTMLButtonElement[] {

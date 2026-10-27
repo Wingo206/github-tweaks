@@ -6,11 +6,11 @@ import type {
   CloneStatus,
   PullRequestRef,
 } from '../../shared/types';
+import { findHeadBranchMounts } from '../../shared/prHeader';
 import {
   clearCheckoutUi,
   createButton,
   createMenu,
-  findHeadBranchMounts,
   positionMenu,
   renderButton,
   renderMenu,

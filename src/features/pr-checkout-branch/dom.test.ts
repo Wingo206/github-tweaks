@@ -5,7 +5,6 @@ import {
   ACCESSIBLE_NAME,
   clearCheckoutUi,
   createButton,
-  findHeadBranchMounts,
   MARKER,
   renderButton,
   syncButtons,
@@ -16,14 +15,6 @@ function fixture(): string {
 }
 
 describe('head branch row', () => {
-  it('finds the head branch link through the copy control, not the base branch', () => {
-    document.body.innerHTML = fixture();
-    const mounts = findHeadBranchMounts(document);
-    expect(mounts).toHaveLength(1);
-    expect(mounts[0]!.link.textContent).toBe('feature/x');
-    expect(mounts[0]!.anchor.getAttribute('aria-label')).toBe('Copy head branch name to clipboard');
-  });
-
   it('inserts one button after the copy tooltip, idempotently, and cleans up', () => {
     document.body.innerHTML = fixture();
     syncButtons(document, createButton);

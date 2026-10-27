@@ -12,6 +12,7 @@ import { PrFileTreeViewportFeature } from '../src/features/pr-file-tree-viewport
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
+import { PrStickyTabsFeature } from '../src/features/pr-sticky-tabs';
 import { PrTabFaviconFeature } from '../src/features/pr-tab-favicon';
 import { FEATURES, type FeatureId } from '../src/features/registry';
 import type { Feature } from '../src/features/types';
@@ -35,6 +36,7 @@ export default defineContentScript({
       'open-in-cursor': new OpenInCursorFeature(),
       'pr-checkout-branch': new PrCheckoutBranchFeature(),
       'pr-tab-favicon': new PrTabFaviconFeature(),
+      'pr-sticky-tabs': new PrStickyTabsFeature(),
     };
     const runner = new FeatureRunner(
       FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),
