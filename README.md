@@ -99,9 +99,12 @@ the branch, the button shows its name (for example, a check and `bagel`).
 Otherwise its menu lists every clone of the repository open in Cursor, with
 its current branch:
 
-- **Check out** runs in an integrated terminal in that clone's window, so git
-  hooks can prompt as usual: `git fetch <remote> <branch>`, then `git switch`.
-  Branches from forks use `gh pr checkout <number>`.
+- **Check out** runs in a terminal tab in that clone's window, so git hooks can
+  prompt as usual: `git fetch <remote> <branch>`, then `git switch`. Branches
+  from forks use `gh pr checkout <number>`. The tab opens in the editor area,
+  so the terminal panel stays open or closed as you left it, and it closes on
+  its own once the checkout and hooks succeed. If anything fails, it stays
+  open so you can read the output.
 - Clones with staged, modified, or conflicted files, or a rebase in progress,
   are listed with the reason and only offer **Focus window**. Untracked files
   do not block.
