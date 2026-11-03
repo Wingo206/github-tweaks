@@ -53,6 +53,7 @@ export class PrSidebarController {
   constructor(
     readonly ref: PullRequestRef,
     readonly selection: PullRequestChangeSelection = { kind: 'all' },
+    private readonly onSnapshot: (snapshot: PullRequestFilesSnapshot) => void = () => {},
   ) {
     this.renderer = new SidebarRenderer({
       onViewedChange: (path, viewed) => {
@@ -186,6 +187,9 @@ export class PrSidebarController {
       this.renderer.showLoading();
     }
     this.observeDocument();
+    if (this.snapshot) {
+      this.onSnapshot(this.snapshot);
+    }
   }
 
   private observeDocument(): void {

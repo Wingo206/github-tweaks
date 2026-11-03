@@ -1,6 +1,7 @@
 import type {
   PageStatus,
   PullRequestChangeSelection,
+  PullRequestFilesSnapshot,
   PullRequestRef,
 } from '../../shared/types';
 import type { Feature, FeatureContext } from '../types';
@@ -12,9 +13,13 @@ import {
 } from './model';
 import './styles.css';
 
+type SnapshotListener = (snapshot: PullRequestFilesSnapshot | null) => void;
+
 export class PrSidebarMetadataFeature implements Feature {
   readonly id = 'pr-sidebar-metadata';
   private controller: PrSidebarController | null = null;
+  private snapshot: PullRequestFilesSnapshot | null = null;
+  private readonly listeners = new Set<SnapshotListener>();
 
   matches({ url }: FeatureContext): boolean {
     return url.hostname === 'github.com' && parsePullRequestUrl(url) !== null;
@@ -29,6 +34,7 @@ export class PrSidebarMetadataFeature implements Feature {
     this.controller = new PrSidebarController(
       ref,
       parseChangeSelection(url),
+      this.publish,
     );
     void this.controller.start();
   }
@@ -49,14 +55,34 @@ export class PrSidebarMetadataFeature implements Feature {
     }
 
     this.stop();
-    this.controller = new PrSidebarController(ref, selection);
+    this.controller = new PrSidebarController(ref, selection, this.publish);
     void this.controller.start();
   }
 
   stop(): void {
     this.controller?.stop();
     this.controller = null;
+    this.publish(null);
   }
+
+  /** Calls `listener` now and whenever the displayed files snapshot changes. */
+  subscribe(listener: SnapshotListener): () => void {
+    this.listeners.add(listener);
+    listener(this.snapshot);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private readonly publish = (snapshot: PullRequestFilesSnapshot | null): void => {
+    if (snapshot === this.snapshot) {
+      return;
+    }
+    this.snapshot = snapshot;
+    for (const listener of this.listeners) {
+      listener(snapshot);
+    }
+  };
 
   getStatus(): PageStatus {
     return this.controller?.getStatus() ?? { state: 'idle' };

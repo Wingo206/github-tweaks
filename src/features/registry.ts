@@ -1,6 +1,7 @@
 export type FeatureId =
   | 'pr-sidebar-metadata'
   | 'pr-file-tree-viewport'
+  | 'pr-auto-collapse-viewed'
   | 'mermaid-fullscreen'
   | 'pr-handback-assignee'
   | 'pr-people-pins'
@@ -29,6 +30,13 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'pr-file-tree-viewport',
     title: 'File tree scroll position',
     description: 'Highlights the files on screen in the changed-files tree.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-auto-collapse-viewed',
+    title: 'Collapse viewed folders',
+    description:
+      'Closes changed-files tree folders once every file in them is Viewed. Needs Pull request sidebar metadata.',
     defaultEnabled: true,
   },
   {

@@ -36,6 +36,16 @@ keep the band in view, except while the pointer is over the tree. The band is
 display only, and it replaces GitHub's own current-file highlight, which
 follows the URL rather than scrolling.
 
+### Collapse viewed folders
+
+On the same changed-files page, a folder in the file tree closes once every
+file under it is marked Viewed, including folders that are already finished
+when the page loads. Finished folders inside it close too, so reopening a
+parent shows its finished subfolders still closed. A folder you reopen yourself
+stays open until one of its files changes Viewed state again. If a file goes
+back to unviewed, every closed folder above it reopens. This feature reads
+Viewed states from Pull request sidebar metadata, so that feature must stay on.
+
 ### Mermaid fullscreen viewer
 
 Anywhere GitHub renders a Mermaid diagram, GitHub Tweaks replaces the native

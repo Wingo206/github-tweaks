@@ -259,6 +259,26 @@ describe('PR sidebar controller', () => {
       vi.useRealTimers();
     }
   });
+
+  it('reports each new snapshot, including Viewed changes made on the page', async () => {
+    document.body.innerHTML = sidebarFixture + diffFixture;
+    mockBackground();
+    const onSnapshot = vi.fn();
+
+    const controller = new PrSidebarController(snapshot.ref, snapshot.selection, onSnapshot);
+    controllers.push(controller);
+    await controller.start();
+    const button = nativeButton('diff-file-one')!;
+    button.setAttribute('aria-pressed', 'true');
+    button.setAttribute('aria-label', 'Viewed');
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await settle();
+
+    const latest = onSnapshot.mock.lastCall?.[0] as PullRequestFilesSnapshot;
+    expect(latest.files.find((file) => file.path === 'src/index.ts')?.viewedState).toBe(
+      'VIEWED',
+    );
+  });
 });
 
 async function settle(): Promise<void> {

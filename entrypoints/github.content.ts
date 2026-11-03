@@ -7,6 +7,7 @@ import {
   type MermaidLogExport,
 } from '../src/features/mermaid-fullscreen/diagnostics';
 import { OpenInCursorFeature } from '../src/features/open-in-cursor';
+import { PrAutoCollapseViewedFeature } from '../src/features/pr-auto-collapse-viewed';
 import { PrCheckoutBranchFeature } from '../src/features/pr-checkout-branch';
 import { PrFileTreeViewportFeature } from '../src/features/pr-file-tree-viewport';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
@@ -30,6 +31,7 @@ export default defineContentScript({
     const features: Record<FeatureId, Feature> = {
       'pr-sidebar-metadata': sidebarFeature,
       'pr-file-tree-viewport': new PrFileTreeViewportFeature(),
+      'pr-auto-collapse-viewed': new PrAutoCollapseViewedFeature(sidebarFeature),
       'mermaid-fullscreen': new MermaidFullscreenFeature(),
       'pr-handback-assignee': new PrHandbackAssigneeFeature(),
       'pr-people-pins': new PrPeoplePinsFeature(),
