@@ -156,3 +156,6 @@ devtools/dom-picker/dumps/
 # Playwright
 playwright-report/
 test-results/
+
+# Agent skills mirror of .cursor/skills
+.agents/
