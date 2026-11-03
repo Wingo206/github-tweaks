@@ -11,6 +11,7 @@ import type {
   CompanionStatus,
   ContentRequest,
   PageStatus,
+  TabGroupOrganizeResult,
 } from '../../src/shared/types';
 
 const featureList = getElement<HTMLUListElement>('feature-list');
@@ -32,11 +33,17 @@ const downloadMermaidLogsButton = getElement<HTMLButtonElement>(
 );
 const clearMermaidLogsButton = getElement<HTMLButtonElement>('clear-mermaid-logs');
 const mermaidLogsStatus = getElement<HTMLElement>('mermaid-logs-status');
+const organizeTabsButton = getElement<HTMLButtonElement>('organize-tabs');
+const organizeStatus = getElement<HTMLElement>('organize-status');
 
 const CONTENT_SCRIPT_MISSING =
   'GitHub Tweaks is not active on this tab. Reload it and try again.';
 
 void initialize();
+
+organizeTabsButton.addEventListener('click', () => {
+  void organizeTabs();
+});
 
 copyMermaidLogsButton.addEventListener('click', () => {
   void exportMermaidLogs('copy');
@@ -102,6 +109,39 @@ async function initialize(): Promise<void> {
     refreshCompanionStatus(),
     refreshMermaidLogCount(),
   ]);
+}
+
+async function organizeTabs(): Promise<void> {
+  organizeTabsButton.disabled = true;
+  organizeStatus.textContent = 'Organizing…';
+  organizeStatus.dataset.state = 'muted';
+  try {
+    const { id: windowId } = await browser.windows.getCurrent();
+    if (windowId === undefined) {
+      throw new Error('Couldn’t find this window.');
+    }
+    const result = await sendBackgroundMessage<TabGroupOrganizeResult>({
+      type: 'tab-groups:organize-window',
+      windowId,
+    });
+    organizeStatus.textContent = describeOrganize(result);
+    organizeStatus.dataset.state = result.moved ? 'success' : 'muted';
+  } catch (error) {
+    organizeStatus.textContent =
+      error instanceof Error ? error.message : 'Couldn’t organize tabs.';
+    organizeStatus.dataset.state = 'error';
+  } finally {
+    organizeTabsButton.disabled = false;
+  }
+}
+
+function describeOrganize({ moved, groups }: TabGroupOrganizeResult): string {
+  if (!moved) {
+    return 'Nothing to move. No ungrouped pull request tab has a group for its pull request.';
+  }
+  const tabs = `${moved} ${moved === 1 ? 'tab' : 'tabs'}`;
+  const into = `${groups} ${groups === 1 ? 'group' : 'groups'}`;
+  return `Moved ${tabs} into ${into}.`;
 }
 
 async function saveCompanionSettings(update: {

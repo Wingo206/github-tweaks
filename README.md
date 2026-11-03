@@ -157,6 +157,26 @@ On Files changed, GitHub only shows the branch summary while its toolbar is
 stuck and the window is wide enough, and the tabs appear and hide with it.
 GitHub's Checks page has no sticky header, so it gets no tabs.
 
+### Pull request tab groups
+
+Keeps the pages of one pull request in the Chrome tab group you already made
+for it. GitHub Tweaks never creates, renames, or removes tab groups, and never
+moves a tab that is already in a group.
+
+- **Automatically:** when you open any page of a pull request (Conversation,
+  Commits, Checks, or Files changed) in an ungrouped tab, and another tab of
+  that pull request is already in a group in the same window, the new tab
+  joins that group, next to the pull request's other tabs. A toast on the page
+  says which group it joined and offers **Undo**, which puts the tab back
+  where it was. A tab joins once per pull request, so after Undo it stays put.
+- **On demand:** **Organize this window** in the toolbar popup does the same
+  for every ungrouped pull request tab in the window. It works even with the
+  automatic option turned off.
+
+Nothing happens when no group holds the pull request, when its tabs are spread
+across more than one group, or when the only group is in another window.
+Pinned tabs are left alone.
+
 ## Install for local use
 
 Requirements: Node.js 20 or newer, pnpm, Chrome, and a GitHub fine-grained
@@ -196,6 +216,8 @@ The extension requests access only to:
 - `http://127.0.0.1/*` to reach the local Cursor companion server (any port)
 - extension-local storage for the token, pull request metadata cache,
   per-repository pinned people, and the companion pairing token
+- `tabGroups` to read the title of the tab group a pull request tab joins.
+  Tab URLs are only visible to the extension on `github.com`.
 
 The companion server listens only on `127.0.0.1`. It rejects requests without
 the pairing token or from a web page origin, and it never receives the GitHub

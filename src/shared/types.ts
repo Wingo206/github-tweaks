@@ -117,6 +117,19 @@ export interface CompanionSettingsView {
   paired: boolean;
 }
 
+export interface TabGroupJoinResult {
+  groupId: number;
+  /** Empty for an untitled group. */
+  groupTitle: string;
+  /** The tab's position before it joined, for Undo. */
+  originalIndex: number;
+}
+
+export interface TabGroupOrganizeResult {
+  moved: number;
+  groups: number;
+}
+
 export type BackgroundRequest =
   | { type: 'open-in-cursor'; target: OpenTarget }
   | { type: 'checkout:status'; target: CheckoutTarget }
@@ -149,6 +162,9 @@ export type BackgroundRequest =
     }
   | { type: 'pull:handback-context'; ref: PullRequestRef }
   | { type: 'pull:handback-assignee'; ref: PullRequestRef }
+  | { type: 'tab-groups:auto-join'; url: string }
+  | { type: 'tab-groups:undo'; groupId: number; originalIndex: number }
+  | { type: 'tab-groups:organize-window'; windowId: number }
   | { type: 'pins:get'; owner: string; repository: string }
   | {
       type: 'pins:save';

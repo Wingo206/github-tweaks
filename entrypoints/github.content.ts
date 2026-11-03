@@ -15,6 +15,7 @@ import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
 import { PrStickyTabsFeature } from '../src/features/pr-sticky-tabs';
 import { PrTabFaviconFeature } from '../src/features/pr-tab-favicon';
+import { PrTabGroupsFeature } from '../src/features/pr-tab-groups';
 import { FEATURES, type FeatureId } from '../src/features/registry';
 import type { Feature } from '../src/features/types';
 import type {
@@ -39,6 +40,7 @@ export default defineContentScript({
       'pr-checkout-branch': new PrCheckoutBranchFeature(),
       'pr-tab-favicon': new PrTabFaviconFeature(),
       'pr-sticky-tabs': new PrStickyTabsFeature(),
+      'pr-tab-groups': new PrTabGroupsFeature(),
     };
     const runner = new FeatureRunner(
       FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),

@@ -1,0 +1,37 @@
+.ght-tg-toast {
+  align-items: center;
+  background: var(--bgColor-emphasis, #25292e);
+  border-radius: 6px;
+  bottom: 24px;
+  box-shadow: var(--shadow-floating-large, 0 8px 24px rgba(0, 0, 0, 0.2));
+  color: var(--fgColor-onEmphasis, #fff);
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  left: 50%;
+  max-width: 420px;
+  padding: 8px 12px;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.ght-tg-toast[data-ght-tg-state="failed"] {
+  background: var(--bgColor-danger-emphasis, #cf222e);
+}
+
+.ght-tg-undo {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.ght-tg-undo:focus-visible {
+  outline: 2px solid var(--fgColor-onEmphasis, #fff);
+  outline-offset: 2px;
+}

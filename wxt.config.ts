@@ -4,7 +4,7 @@ export default defineConfig({
   manifest: {
     name: 'GitHub Tweaks',
     description: 'Personal interface improvements for GitHub.',
-    permissions: ['storage'],
+    permissions: ['storage', 'tabGroups'],
     host_permissions: [
       'https://github.com/*',
       'https://api.github.com/*',

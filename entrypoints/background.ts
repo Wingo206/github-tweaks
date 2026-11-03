@@ -28,7 +28,13 @@ import {
   startCheckout,
 } from '../src/companion/client';
 import { resolveOpenTarget } from '../src/companion/resolveTarget';
+import {
+  chromeTabGroupsApi,
+  TabGroupOrganizer,
+} from '../src/features/pr-tab-groups/organizer';
 import type { BackgroundRequest, BackgroundResponse } from '../src/shared/types';
+
+const tabGroups = new TabGroupOrganizer(chromeTabGroupsApi());
 
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
@@ -165,6 +171,19 @@ async function handleRequest(
       const token = await requireToken();
       return handbackAssignee(token, request.ref);
     }
+    case 'tab-groups:auto-join': {
+      const tabId = sender.tab?.id;
+      return tabId === undefined ? null : tabGroups.autoJoin(tabId, request.url);
+    }
+    case 'tab-groups:undo': {
+      const tabId = sender.tab?.id;
+      if (tabId !== undefined) {
+        await tabGroups.undoJoin(tabId, request.groupId, request.originalIndex);
+      }
+      return undefined;
+    }
+    case 'tab-groups:organize-window':
+      return tabGroups.organizeWindow(request.windowId);
     case 'pins:get':
       return getPeoplePins(request.owner, request.repository);
     case 'pins:save':

@@ -8,7 +8,8 @@ export type FeatureId =
   | 'open-in-cursor'
   | 'pr-checkout-branch'
   | 'pr-tab-favicon'
-  | 'pr-sticky-tabs';
+  | 'pr-sticky-tabs'
+  | 'pr-tab-groups';
 
 export interface FeatureDefinition {
   id: FeatureId;
@@ -79,6 +80,13 @@ export const FEATURES: readonly FeatureDefinition[] = [
     id: 'pr-sticky-tabs',
     title: 'Tabs in the sticky header',
     description: 'Conversation, Commits, Checks, and Files changed beside the branch name once you scroll.',
+    defaultEnabled: true,
+  },
+  {
+    id: 'pr-tab-groups',
+    title: 'Join pull request tab groups',
+    description:
+      'Moves a PR page you open into the tab group that already holds that PR in this window. Never creates groups.',
     defaultEnabled: true,
   },
 ];
