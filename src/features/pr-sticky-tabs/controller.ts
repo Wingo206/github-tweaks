@@ -1,10 +1,18 @@
-import { clearStickyTabs, createNav, findNativeTabs, syncTabs, type NativeTab } from './dom';
-import { isPlainClick } from './model';
+import {
+  clearStickyTabs,
+  createNav,
+  findNativeLineCounts,
+  findNativeTabs,
+  showsLineCounts,
+  syncTabs,
+  type NativeTab,
+} from './dom';
+import { isPlainClick, type LineCounts } from './model';
 
 /**
- * Mirrors GitHub's pull request tab bar into the sticky header. Plain clicks
- * are forwarded to GitHub's own tab link so it navigates in-page; clicking the
- * current tab scrolls to the top instead.
+ * Mirrors GitHub's pull request tab bar and line totals into the sticky header.
+ * Plain clicks are forwarded to GitHub's own tab link so it navigates in-page;
+ * clicking the current tab scrolls to the top instead.
  */
 export class StickyTabsController {
   private observer: MutationObserver | null = null;
@@ -28,12 +36,14 @@ export class StickyTabsController {
       return;
     }
     this.observer?.disconnect();
-    syncTabs(document, findNativeTabs(document), (tabs) => this.createBoundNav(tabs));
+    const tabs = findNativeTabs(document);
+    const lines = showsLineCounts(tabs) ? findNativeLineCounts(document) : null;
+    syncTabs(document, tabs, lines, (tabs, lines) => this.createBoundNav(tabs, lines));
     this.observe();
   }
 
-  private createBoundNav(tabs: readonly NativeTab[]): HTMLElement {
-    const nav = createNav(tabs);
+  private createBoundNav(tabs: readonly NativeTab[], lines: LineCounts | null): HTMLElement {
+    const nav = createNav(tabs, lines);
     nav.addEventListener('click', (event) => this.onClick(event));
     return nav;
   }

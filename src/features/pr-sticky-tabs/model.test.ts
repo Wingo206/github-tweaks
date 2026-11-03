@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { accessibleName, isPlainClick, isPullRequestPage, tabsKey, type StickyTab } from './model';
+import {
+  accessibleName,
+  isPlainClick,
+  isPullRequestPage,
+  lineCountsLabel,
+  parseLineCounts,
+  tabsKey,
+  type StickyTab,
+} from './model';
 
 const tab: StickyTab = {
   href: '/acme/widgets/pull/42',
@@ -38,6 +46,34 @@ describe('tabsKey', () => {
     expect(tabsKey([{ ...tab }])).toBe(key);
     expect(tabsKey([{ ...tab, count: '9' }])).not.toBe(key);
     expect(tabsKey([{ ...tab, current: false }])).not.toBe(key);
+  });
+
+  it('changes when the line counts change or appear', () => {
+    const lines = { additions: 5, deletions: 2 };
+    const key = tabsKey([tab], lines);
+    expect(tabsKey([tab], { ...lines })).toBe(key);
+    expect(tabsKey([tab], { ...lines, deletions: 3 })).not.toBe(key);
+    expect(tabsKey([tab], null)).not.toBe(key);
+  });
+});
+
+describe('parseLineCounts', () => {
+  it('reads GitHub’s “Lines changed” text, singular or plural', () => {
+    expect(parseLineCounts('Lines changed: 1479 additions & 340 deletions')).toEqual({ additions: 1479, deletions: 340 });
+    expect(parseLineCounts(' Lines changed: 1 addition & 1 deletion ')).toEqual({ additions: 1, deletions: 1 });
+    expect(parseLineCounts('Lines changed: 2,084 additions & 0 deletions')).toEqual({ additions: 2084, deletions: 0 });
+  });
+
+  it('rejects other screen-reader text', () => {
+    expect(parseLineCounts('0 of 4,762 changes viewed')).toBeNull();
+    expect(parseLineCounts('16 changes: 8 additions & 8 deletions')).toBeNull();
+  });
+});
+
+describe('lineCountsLabel', () => {
+  it('formats both totals with the right plural', () => {
+    expect(lineCountsLabel({ additions: 1479, deletions: 1 })).toBe('1,479 additions and 1 deletion');
+    expect(lineCountsLabel({ additions: 1, deletions: 0 })).toBe('1 addition and 0 deletions');
   });
 });
 

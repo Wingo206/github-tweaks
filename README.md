@@ -152,6 +152,9 @@ button). Counts and the current tab follow GitHub's own tab bar.
 - A click goes through GitHub's own tab link, so it navigates the same way.
   Cmd/Ctrl-click and middle-click open the tab in a new browser tab.
 - Clicking the tab you are already on scrolls back to the top.
+- After the tabs, the pull request's `+additions -deletions` totals, copied
+  from the ones GitHub shows beside its tab bar. Files changed leaves them
+  out, since its toolbar already has the changes meter.
 
 On Files changed, GitHub only shows the branch summary while its toolbar is
 stuck and the window is wide enough, and the tabs appear and hide with it.

@@ -1,11 +1,20 @@
 import { findHeadBranchMounts } from '../../shared/prHeader';
-import { accessibleName, tabsKey, type StickyTab } from './model';
+import {
+  accessibleName,
+  formatLineCount,
+  lineCountsLabel,
+  parseLineCounts,
+  tabsKey,
+  type LineCounts,
+  type StickyTab,
+} from './model';
 
 export const MARKER = 'data-ght-sticky-tabs';
 const KEY = 'data-ght-pst-key';
 
 /** GitHub gives these two tab links fixed IDs; their parent holds every tab. */
 const NATIVE_TAB_ANCHORS = '#prs-files-anchor-tab, #prs-commits-anchor-tab';
+const FILES_TAB_ID = 'prs-files-anchor-tab';
 
 export interface NativeTab extends StickyTab {
   link: HTMLAnchorElement;
@@ -19,6 +28,27 @@ export function findNativeTabs(root: ParentNode): NativeTab[] {
     return [];
   }
   return [...list.querySelectorAll<HTMLAnchorElement>(':scope > a[href]')].map(readTab);
+}
+
+/**
+ * The pull request's line totals from the main header, beside GitHub's tab
+ * bar. Diff file headers reuse the same "Lines changed" text, so the search
+ * stays inside the header's navigation area.
+ */
+export function findNativeLineCounts(root: ParentNode): LineCounts | null {
+  const navigation = root.querySelector(NATIVE_TAB_ANCHORS)?.closest('[data-component="PH_Navigation"]');
+  for (const label of navigation?.querySelectorAll('.sr-only') ?? []) {
+    const counts = parseLineCounts(label.textContent ?? '');
+    if (counts) {
+      return counts;
+    }
+  }
+  return null;
+}
+
+/** Files changed has its own changes meter in the sticky toolbar. */
+export function showsLineCounts(tabs: readonly NativeTab[]): boolean {
+  return !tabs.some((tab) => tab.current && tab.link.id === FILES_TAB_ID);
 }
 
 function readTab(link: HTMLAnchorElement): NativeTab {
@@ -71,9 +101,10 @@ function branchGroup(link: Element, header: Element): Element | null {
 export function syncTabs(
   root: ParentNode,
   tabs: readonly NativeTab[],
-  create: (tabs: readonly NativeTab[]) => HTMLElement,
+  lines: LineCounts | null,
+  create: (tabs: readonly NativeTab[], lines: LineCounts | null) => HTMLElement,
 ): HTMLElement[] {
-  const key = tabsKey(tabs);
+  const key = tabsKey(tabs, lines);
   const kept = new Set<Element>();
   if (tabs.length) {
     for (const mount of findStickyMounts(root)) {
@@ -82,7 +113,7 @@ export function syncTabs(
         kept.add(existing);
         continue;
       }
-      const nav = create(tabs);
+      const nav = create(tabs, lines);
       if (existing) {
         existing.replaceWith(nav);
       } else {
@@ -99,14 +130,39 @@ export function syncTabs(
   return [...root.querySelectorAll<HTMLElement>(`[${MARKER}="nav"]`)];
 }
 
-export function createNav(tabs: readonly NativeTab[]): HTMLElement {
+export function createNav(tabs: readonly NativeTab[], lines: LineCounts | null = null): HTMLElement {
   const nav = document.createElement('nav');
   nav.className = 'ght-pst-nav';
   nav.setAttribute(MARKER, 'nav');
-  nav.setAttribute(KEY, tabsKey(tabs));
+  nav.setAttribute(KEY, tabsKey(tabs, lines));
   nav.setAttribute('aria-label', 'Pull request tabs');
   nav.append(...tabs.map(createTab));
+  if (lines) {
+    nav.append(createLineCounts(lines));
+  }
   return nav;
+}
+
+function createLineCounts(lines: LineCounts): HTMLElement {
+  const wrapper = document.createElement('span');
+  wrapper.className = 'ght-pst-lines';
+  wrapper.title = lineCountsLabel(lines);
+  wrapper.append(
+    textSpan('ght-pst-additions', `+${formatLineCount(lines.additions)}`, true),
+    textSpan('ght-pst-deletions', `-${formatLineCount(lines.deletions)}`, true),
+    textSpan('sr-only', `Lines changed: ${lineCountsLabel(lines)}`, false),
+  );
+  return wrapper;
+}
+
+function textSpan(className: string, text: string, hidden: boolean): HTMLSpanElement {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = text;
+  if (hidden) {
+    span.setAttribute('aria-hidden', 'true');
+  }
+  return span;
 }
 
 function createTab(tab: NativeTab): HTMLAnchorElement {

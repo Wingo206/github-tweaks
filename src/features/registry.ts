@@ -79,7 +79,8 @@ export const FEATURES: readonly FeatureDefinition[] = [
   {
     id: 'pr-sticky-tabs',
     title: 'Tabs in the sticky header',
-    description: 'Conversation, Commits, Checks, and Files changed beside the branch name once you scroll.',
+    description:
+      'Conversation, Commits, Checks, and Files changed, plus line totals, beside the branch name once you scroll.',
     defaultEnabled: true,
   },
   {

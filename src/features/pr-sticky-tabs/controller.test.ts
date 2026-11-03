@@ -99,6 +99,24 @@ describe('StickyTabsController', () => {
     expect(document.querySelectorAll(`[${MARKER}="nav"]`)).toHaveLength(1);
   });
 
+  it('shows the line totals on Conversation and follows GitHub’s updates', async () => {
+    start('conversation');
+    const lines = (): string | null =>
+      document.querySelector(`[${MARKER}="nav"] .ght-pst-lines`)?.getAttribute('title') ?? null;
+    expect(lines()).toBe('1,479 additions and 1 deletion');
+
+    document.querySelector('[data-component="PH_Navigation"] .sr-only')!.textContent =
+      'Lines changed: 1500 additions & 1 deletion';
+    await nextFrame();
+    expect(lines()).toBe('1,500 additions and 1 deletion');
+  });
+
+  it('leaves the line totals off Files changed', () => {
+    start('files-changed');
+    expect(document.querySelectorAll(`[${MARKER}="nav"]`)).toHaveLength(1);
+    expect(document.querySelector('.ght-pst-lines')).toBeNull();
+  });
+
   it('removes its UI on stop and stops watching the page', async () => {
     start('conversation');
     controller!.stop();

@@ -49,6 +49,25 @@
   flex-shrink: 0;
 }
 
+.ght-pst-lines {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+  line-height: 20px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.ght-pst-additions {
+  color: var(--fgColor-success, #1a7f37);
+}
+
+.ght-pst-deletions {
+  color: var(--fgColor-danger, #d1242f);
+}
+
 .ght-pst-count {
   background: var(--bgColor-neutral-muted, rgba(129, 139, 152, 0.2));
   border-radius: 2em;
