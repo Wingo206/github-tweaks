@@ -24,6 +24,8 @@ export interface HandbackSyncResult {
 
 /** One page layout's Assignees block. */
 export interface AssigneesAdapter {
+  /** Selector for the part of the page the block lives in; other changes are ignored. */
+  area: string;
   /** The Assignees block, or null when this layout's sidebar is not on the page. */
   findRoot(root: ParentNode): HTMLElement | null;
   sync(assigneesRoot: HTMLElement, options: HandbackRenderOptions): HandbackSyncResult;
@@ -46,6 +48,8 @@ const OVERVIEW_ROOT_SELECTOR = 'section[aria-label="Assignees"][data-overview-si
  * nested inside GitHub's button.
  */
 export const overviewAssignees: AssigneesAdapter = {
+  area: OVERVIEW_ROOT_SELECTOR,
+
   findRoot(root) {
     return root.querySelector<HTMLElement>(OVERVIEW_ROOT_SELECTOR);
   },
@@ -102,7 +106,7 @@ function renderAction(mount: HTMLElement, options: HandbackRenderOptions): void 
       mount.append(note);
     }
     setText(note, 'reassigned, reload to update');
-    note.title = `Reassigned to ${options.authorLogin}`;
+    setAttribute(note, 'title', `Reassigned to ${options.authorLogin}`);
     return;
   }
 
@@ -114,10 +118,12 @@ function renderAction(mount: HTMLElement, options: HandbackRenderOptions): void 
     mount.append(button);
   }
   const updating = options.uiState === 'updating';
-  button.disabled = updating;
-  button.setAttribute('aria-busy', String(updating));
-  button.setAttribute('aria-label', `Reassign to ${options.authorLogin}`);
-  button.title = `Reassign to ${options.authorLogin}`;
+  if (button.disabled !== updating) {
+    button.disabled = updating;
+  }
+  setAttribute(button, 'aria-busy', String(updating));
+  setAttribute(button, 'aria-label', `Reassign to ${options.authorLogin}`);
+  setAttribute(button, 'title', `Reassign to ${options.authorLogin}`);
   setText(button, updating ? 'reassigning…' : 'reassign author');
   const stop = (event: Event): void => {
     event.preventDefault();
@@ -152,5 +158,11 @@ function renderError(heading: HTMLElement, options: HandbackRenderOptions): void
 function setText(element: HTMLElement, text: string): void {
   if (element.textContent !== text) {
     element.textContent = text;
+  }
+}
+
+function setAttribute(element: Element, name: string, value: string): void {
+  if (element.getAttribute(name) !== value) {
+    element.setAttribute(name, value);
   }
 }

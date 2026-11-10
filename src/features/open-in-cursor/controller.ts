@@ -1,4 +1,6 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
+import { touches } from '../../shared/mutations';
 import type { OpenResult } from '../../shared/types';
 import {
   clearOpenInCursorUi,
@@ -12,6 +14,15 @@ import {
   type Opener,
 } from './dom';
 import type { OpenInCursorRoute } from './model';
+
+/** Diffs (headers, lines, review threads) and Overview review threads. */
+const PULL_AREAS = [
+  '[role="region"][id^="diff-"]',
+  '[data-marker-id]',
+  'article',
+  // TODO(classic-4): classic Conversation review threads.
+  'review-thread-collapsible',
+].join(', ');
 
 const defaultOpener: Opener = (target) =>
   sendBackgroundMessage<OpenResult>({ type: 'open-in-cursor', target });
@@ -66,7 +77,11 @@ export class OpenInCursorController {
     if (this.stopped || !document.body) {
       return;
     }
-    this.observer ??= new MutationObserver(() => this.queueSync());
+    this.observer ??= trackedObserver('open-in-cursor', (records) => {
+      if (this.route.kind !== 'pull' || touches(records, PULL_AREAS)) {
+        this.queueSync();
+      }
+    });
     this.observer.observe(document.body, { childList: true, subtree: true });
   }
 
@@ -75,9 +90,11 @@ export class OpenInCursorController {
       return;
     }
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('open-in-cursor', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }

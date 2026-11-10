@@ -1,4 +1,6 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
+import { touches } from '../../shared/mutations';
 import type { HandbackContext, PullRequestRef } from '../../shared/types';
 import { classicAssignees } from './classicDom';
 import {
@@ -13,6 +15,8 @@ const ADAPTERS: readonly AssigneesAdapter[] = [
   // TODO(classic-2): the classic Conversation sidebar.
   classicAssignees,
 ];
+
+const AREAS = ADAPTERS.map((adapter) => adapter.area).join(', ');
 
 function findAssignees(): { adapter: AssigneesAdapter; root: HTMLElement } | null {
   for (const adapter of ADAPTERS) {
@@ -188,8 +192,10 @@ export class HandbackController {
       return;
     }
 
-    this.observer ??= new MutationObserver(() => {
-      this.queueSync();
+    this.observer ??= trackedObserver('pr-handback-assignee', (records) => {
+      if (touches(records, AREAS)) {
+        this.queueSync();
+      }
     });
 
     this.observer.observe(document.body, {
@@ -204,9 +210,11 @@ export class HandbackController {
     }
 
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-handback-assignee', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }

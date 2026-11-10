@@ -1,3 +1,4 @@
+import { trackedObserver } from '../../diagnostics/recorder';
 import { MERMAID_OPEN_CLASS } from '../../shared/pageSignals';
 import { FAVICON_MODES, renderFavicon, type FaviconMode, type PrTab } from './model';
 
@@ -24,14 +25,14 @@ export class PrTabMarker {
 
   start(): void {
     this.sync();
-    this.headObserver = new MutationObserver(() => this.sync());
+    this.headObserver = trackedObserver('pr-tab-favicon', () => this.sync());
     this.headObserver.observe(this.doc.head, {
       subtree: true,
       childList: true,
       attributes: true,
       attributeFilter: ['href'],
     });
-    this.rootObserver = new MutationObserver(() => this.sync());
+    this.rootObserver = trackedObserver('pr-tab-favicon', () => this.sync());
     this.rootObserver.observe(this.doc.documentElement, {
       attributes: true,
       attributeFilter: ['class'],

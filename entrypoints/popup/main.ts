@@ -1,4 +1,6 @@
+import { perfLogFilename, summarizePerfLog } from '../../src/diagnostics/log';
 import { getFeatureFlags, setFeatureEnabled } from '../../src/features/flags';
+import { BUILD_TIME } from '../../src/shared/build';
 import {
   mermaidLogFilename,
   summarizeMermaidLogs,
@@ -11,6 +13,7 @@ import type {
   CompanionStatus,
   ContentRequest,
   PageStatus,
+  StoredPerfLogEntry,
   TabGroupOrganizeResult,
 } from '../../src/shared/types';
 
@@ -33,6 +36,11 @@ const downloadMermaidLogsButton = getElement<HTMLButtonElement>(
 );
 const clearMermaidLogsButton = getElement<HTMLButtonElement>('clear-mermaid-logs');
 const mermaidLogsStatus = getElement<HTMLElement>('mermaid-logs-status');
+const copyPerfLogButton = getElement<HTMLButtonElement>('copy-perf-log');
+const downloadPerfLogButton = getElement<HTMLButtonElement>('download-perf-log');
+const clearPerfLogButton = getElement<HTMLButtonElement>('clear-perf-log');
+const perfLogStatus = getElement<HTMLElement>('perf-log-status');
+const buildTime = getElement<HTMLElement>('build-time');
 const organizeTabsButton = getElement<HTMLButtonElement>('organize-tabs');
 const organizeStatus = getElement<HTMLElement>('organize-status');
 
@@ -56,6 +64,24 @@ downloadMermaidLogsButton.addEventListener('click', () => {
 clearMermaidLogsButton.addEventListener('click', () => {
   void clearMermaidLogs();
 });
+
+copyPerfLogButton.addEventListener('click', () => {
+  void exportPerfLog('copy');
+});
+
+downloadPerfLogButton.addEventListener('click', () => {
+  void exportPerfLog('download');
+});
+
+clearPerfLogButton.addEventListener('click', () => {
+  void runPerfLogAction('Clearing…', async () => {
+    await sendBackgroundMessage<void>({ type: 'perf-log:clear' });
+    return 'Cleared.';
+  });
+});
+
+buildTime.textContent =
+  BUILD_TIME === 'dev' ? 'Development build' : `Built ${new Date(BUILD_TIME).toLocaleString()}`;
 
 companionPortInput.addEventListener('change', () => {
   void saveCompanionSettings({ port: Number(companionPortInput.value) });
@@ -108,7 +134,42 @@ async function initialize(): Promise<void> {
     refreshPageStatus(false),
     refreshCompanionStatus(),
     refreshMermaidLogCount(),
+    runPerfLogAction('Checking…', async () => {
+      const entries = await sendBackgroundMessage<StoredPerfLogEntry[]>({ type: 'perf-log:get' });
+      return `${summarizePerfLog(entries)} recorded.`;
+    }),
   ]);
+}
+
+async function runPerfLogAction(pending: string, action: () => Promise<string>): Promise<void> {
+  const buttons = [copyPerfLogButton, downloadPerfLogButton, clearPerfLogButton];
+  buttons.forEach((button) => (button.disabled = true));
+  perfLogStatus.textContent = pending;
+  perfLogStatus.dataset.state = 'muted';
+  try {
+    perfLogStatus.textContent = await action();
+  } catch (error) {
+    perfLogStatus.textContent =
+      error instanceof Error ? error.message : 'Couldn’t read the performance log.';
+    perfLogStatus.dataset.state = 'error';
+  } finally {
+    buttons.forEach((button) => (button.disabled = false));
+  }
+}
+
+async function exportPerfLog(mode: 'copy' | 'download'): Promise<void> {
+  await runPerfLogAction('Reading…', async () => {
+    const entries = await sendBackgroundMessage<StoredPerfLogEntry[]>({ type: 'perf-log:get' });
+    const exportedAt = new Date().toISOString();
+    const json = JSON.stringify({ exportedAt, build: BUILD_TIME, entries });
+    if (mode === 'copy') {
+      await navigator.clipboard.writeText(json);
+    } else {
+      downloadText(json, perfLogFilename(exportedAt));
+    }
+    perfLogStatus.dataset.state = 'success';
+    return `${mode === 'copy' ? 'Copied' : 'Downloaded'} ${summarizePerfLog(entries)}.`;
+  });
 }
 
 async function organizeTabs(): Promise<void> {

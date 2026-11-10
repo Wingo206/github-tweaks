@@ -1,4 +1,6 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
+import { touches } from '../../shared/mutations';
 import type { PinnedPerson, PullRequestRef } from '../../shared/types';
 import {
   clearPeoplePins,
@@ -227,7 +229,12 @@ export class PeoplePinsController {
     if (this.stopped || !document.body) {
       return;
     }
-    this.observer ??= new MutationObserver(() => this.queueSync());
+    // GitHub renders its pickers into this portal.
+    this.observer ??= trackedObserver('pr-people-pins', (records) => {
+      if (touches(records, '#__primerPortalRoot__')) {
+        this.queueSync();
+      }
+    });
     this.observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -241,9 +248,11 @@ export class PeoplePinsController {
       return;
     }
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-people-pins', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }

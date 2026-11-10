@@ -1,3 +1,4 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import type { PullRequestFilesSnapshot } from '../../shared/types';
 import {
   findFolderRows,
@@ -6,10 +7,22 @@ import {
   toggleFolder,
   touchesTree,
 } from './dom';
-import { AutoCollapseState } from './model';
+import { AutoCollapseState, type FolderRowState } from './model';
 
 /** How long to wait for GitHub to apply a chevron click before trying again. */
 const TOGGLE_TIMEOUT_MS = 1000;
+/** Chevron clicks per frame stop once this much time has gone by. */
+const FRAME_BUDGET_MS = 16;
+
+/** Whether `path` is under one of `folders`. */
+function isInside(path: string, folders: ReadonlySet<string>): boolean {
+  for (let end = path.lastIndexOf('/'); end > 0; end = path.lastIndexOf('/', end - 1)) {
+    if (folders.has(path.slice(0, end))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export type SnapshotListener = (snapshot: PullRequestFilesSnapshot | null) => void;
 
@@ -36,7 +49,7 @@ export class AutoCollapseController {
   ) {}
 
   start(): void {
-    this.observer = new MutationObserver(this.onMutations);
+    this.observer = trackedObserver('pr-auto-collapse-viewed', this.onMutations);
     this.observer.observe(this.doc.body, {
       childList: true,
       subtree: true,
@@ -60,6 +73,12 @@ export class AutoCollapseController {
     this.pending.clear();
   }
 
+  /**
+   * Only folders that are shown get toggled: rows under a closed (or closing)
+   * folder wait until it is opened again. Each chevron click makes GitHub
+   * re-render its tree, which is slow on large pull requests, so clicks are
+   * spread over frames instead of all landing in one long task.
+   */
   reconcile(): void {
     const now = Date.now();
     const found = findFolderRows(this.doc);
@@ -72,25 +91,53 @@ export class AutoCollapseController {
     }
 
     const rows = new Map<string, HTMLElement>();
-    const states = [];
+    const states: FolderRowState[] = [];
+    const closed = new Set<string>();
     for (const row of found) {
       const state = readFolderRow(row);
+      if (isInside(state.path, closed)) {
+        continue;
+      }
       const pending = this.pending.get(state.path);
       if (pending) {
         if (pending.expanded !== state.expanded && now - pending.at < TOGGLE_TIMEOUT_MS) {
+          if (!pending.expanded) {
+            closed.add(state.path);
+          }
           continue;
         }
         this.pending.delete(state.path);
+      }
+      if (!state.expanded) {
+        closed.add(state.path);
       }
       rows.set(state.path, row);
       states.push(state);
     }
 
+    const started = performance.now();
+    let deferred = false;
     for (const change of this.state.changes(states)) {
+      if (isInside(change.path, closed)) {
+        continue;
+      }
+      if (deferred || performance.now() - started > FRAME_BUDGET_MS) {
+        deferred = true;
+        if (change.expanded) {
+          this.state.deferReopen(change.path);
+        }
+        continue;
+      }
       const row = rows.get(change.path);
       if (row && toggleFolder(row)) {
         this.pending.set(change.path, { expanded: change.expanded, at: now });
+        if (!change.expanded) {
+          closed.add(change.path);
+        }
       }
+    }
+    if (deferred) {
+      this.queueReconcile();
     }
   }
 
@@ -101,7 +148,7 @@ export class AutoCollapseController {
       return;
     }
     this.state.setFiles(snapshot.files);
-    this.reconcile();
+    this.queueReconcile();
   };
 
   private readonly onMutations = (mutations: MutationRecord[]): void => {
@@ -132,9 +179,11 @@ export class AutoCollapseController {
     if (this.frame !== undefined || !view) {
       return;
     }
-    this.frame = view.requestAnimationFrame(() => {
-      this.frame = undefined;
-      this.reconcile();
-    });
+    this.frame = view.requestAnimationFrame(() =>
+      tracked('pr-auto-collapse-viewed', 'reconcile', () => {
+        this.frame = undefined;
+        this.reconcile();
+      }),
+    );
   }
 }

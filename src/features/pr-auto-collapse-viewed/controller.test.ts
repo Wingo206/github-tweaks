@@ -204,6 +204,58 @@ describe('AutoCollapseController', () => {
     expect(expanded('web/components/home')).toBe(false);
   });
 
+  it('clicks only the top-most finished folder, not the ones it hides', async () => {
+    const clicked: string[] = [];
+    document.addEventListener(
+      'click',
+      (event) => {
+        const row = (event.target as Element).closest('li[role="treeitem"]');
+        if (row) {
+          clicked.push(row.id);
+        }
+      },
+      { capture: true, signal: unwire.signal },
+    );
+    const source = createSource();
+    start(source);
+    source.publish(snapshot(PATHS.slice(0, 4)));
+    await settle();
+
+    expect(clicked).toEqual(['web']);
+    expect(expanded('web')).toBe(false);
+  });
+
+  it('spreads slow chevron clicks over frames', async () => {
+    const clicked: string[] = [];
+    document.addEventListener(
+      'click',
+      (event) => {
+        const row = (event.target as Element).closest('li[role="treeitem"]');
+        if (row) {
+          clicked.push(row.id);
+          const until = performance.now() + 25;
+          while (performance.now() < until) {
+            // GitHub re-rendering a large tree.
+          }
+        }
+      },
+      { capture: true, signal: unwire.signal },
+    );
+    document.getElementById('web/components/home/utils')!.setAttribute('aria-expanded', 'true');
+    const source = createSource();
+    start(source);
+    source.publish(snapshot([...DIALOG_FILES, 'web/components/home/utils/format.ts']));
+
+    await nextFrame();
+    await Promise.resolve();
+    expect(clicked).toEqual([DIALOG]);
+
+    await settle();
+    expect(clicked).toEqual([DIALOG, 'web/components/home/utils']);
+    expect(expanded(DIALOG)).toBe(false);
+    expect(expanded('web/components/home/utils')).toBe(false);
+  });
+
   it('does nothing after the source reports no pull request', async () => {
     const source = createSource();
     start(source);

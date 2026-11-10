@@ -112,6 +112,20 @@
           </button>
         </div>
         <p id="mermaid-logs-status" class="status" role="status">Checking…</p>
+        <p class="hint">
+          Performance log, recorded while <strong>Performance log</strong> is
+          on under Features. It's kept in extension storage, so it survives a
+          tab that crashed.
+        </p>
+        <div class="button-row">
+          <button id="copy-perf-log" type="button">Copy performance log</button>
+          <button id="download-perf-log" type="button">Download</button>
+          <button id="clear-perf-log" class="link-button" type="button">
+            Clear
+          </button>
+        </div>
+        <p id="perf-log-status" class="status" role="status">Checking…</p>
+        <p id="build-time" class="hint"></p>
       </section>
 
       <p id="error" class="error" role="alert" hidden></p>

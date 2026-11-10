@@ -1,3 +1,4 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
 import type {
   CheckoutActionResult,
@@ -6,7 +7,8 @@ import type {
   CloneStatus,
   PullRequestRef,
 } from '../../shared/types';
-import { findHeadBranchMounts } from '../../shared/prHeader';
+import { touches } from '../../shared/mutations';
+import { findHeadBranchMounts, PR_HEADER_AREAS } from '../../shared/prHeader';
 import {
   clearCheckoutUi,
   createButton,
@@ -327,7 +329,11 @@ export class CheckoutBranchController {
     if (this.stopped || !document.body) {
       return;
     }
-    this.observer ??= new MutationObserver(() => this.queueSync());
+    this.observer ??= trackedObserver('pr-checkout-branch', (records) => {
+      if (touches(records, PR_HEADER_AREAS)) {
+        this.queueSync();
+      }
+    });
     this.observer.observe(document.body, { childList: true, subtree: true });
   }
 
@@ -336,10 +342,12 @@ export class CheckoutBranchController {
       return;
     }
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-checkout-branch', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }
 

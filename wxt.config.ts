@@ -15,4 +15,9 @@ export default defineConfig({
       default_title: 'GitHub Tweaks',
     },
   },
+  vite: () => ({
+    define: {
+      __GHT_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    },
+  }),
 });

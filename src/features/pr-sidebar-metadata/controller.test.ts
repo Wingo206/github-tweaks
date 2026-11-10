@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PrSidebarController } from './controller';
+import { SidebarRenderer } from './dom';
 import type {
   BackgroundRequest,
   PullRequestFilesSnapshot,
@@ -257,6 +258,38 @@ describe('PR sidebar controller', () => {
       );
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it('re-renders for new tree rows and removed metadata, not for unrelated page changes', async () => {
+    document.body.innerHTML = sidebarFixture;
+    mockBackground();
+    const controller = createController();
+    await controller.start();
+    await settle();
+    const render = vi.spyOn(SidebarRenderer.prototype, 'render');
+    try {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        '<span data-component="Tooltip" popover="auto">Copy link</span>',
+      );
+      await nextFrame();
+      expect(render).not.toHaveBeenCalled();
+
+      const row = document.getElementById('src/empty.png')!;
+      const added = row.cloneNode(true) as HTMLElement;
+      added.id = 'src/other.ts';
+      added.querySelector('[data-ght-pr-metadata]')?.remove();
+      row.after(added);
+      await nextFrame();
+      expect(render).toHaveBeenCalledTimes(1);
+
+      document.getElementById('src/index.ts')!.querySelector('[data-ght-pr-metadata]')!.remove();
+      await nextFrame();
+      expect(render).toHaveBeenCalledTimes(2);
+      expect(document.getElementById('src/index.ts')!.querySelector('[data-ght-pr-metadata]')).not.toBeNull();
+    } finally {
+      render.mockRestore();
     }
   });
 

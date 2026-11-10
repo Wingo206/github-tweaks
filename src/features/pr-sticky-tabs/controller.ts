@@ -1,3 +1,6 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
+import { touches } from '../../shared/mutations';
+import { PR_HEADER_AREAS } from '../../shared/prHeader';
 import {
   clearStickyTabs,
   createNav,
@@ -69,7 +72,11 @@ export class StickyTabsController {
     if (this.stopped || !document.body) {
       return;
     }
-    this.observer ??= new MutationObserver(() => this.queueSync());
+    this.observer ??= trackedObserver('pr-sticky-tabs', (records) => {
+      if (touches(records, PR_HEADER_AREAS)) {
+        this.queueSync();
+      }
+    });
     this.observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -84,9 +91,11 @@ export class StickyTabsController {
       return;
     }
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-sticky-tabs', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }

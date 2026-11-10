@@ -9,7 +9,8 @@ export type FeatureId =
   | 'pr-checkout-branch'
   | 'pr-tab-favicon'
   | 'pr-sticky-tabs'
-  | 'pr-tab-groups';
+  | 'pr-tab-groups'
+  | 'perf-log';
 
 export interface FeatureDefinition {
   id: FeatureId;
@@ -89,6 +90,13 @@ export const FEATURES: readonly FeatureDefinition[] = [
     description:
       'Moves a PR page you open into the tab group that already holds that PR in this window. Never creates groups.',
     defaultEnabled: true,
+  },
+  {
+    id: 'perf-log',
+    title: 'Performance log',
+    description:
+      'For debugging slow or crashing tabs: records page and per-feature work every 5 s. Copy it under Diagnostics.',
+    defaultEnabled: false,
   },
 ];
 

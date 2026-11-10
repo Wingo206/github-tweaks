@@ -40,8 +40,8 @@ follows the URL rather than scrolling.
 
 On the same changed-files page, a folder in the file tree closes once every
 file under it is marked Viewed, including folders that are already finished
-when the page loads. Finished folders inside it close too, so reopening a
-parent shows its finished subfolders still closed. A folder you reopen yourself
+when the page loads. Finished folders inside it close as soon as you reopen
+the parent, so its finished subfolders show closed. A folder you reopen yourself
 stays open until one of its files changes Viewed state again. If a file goes
 back to unviewed, every closed folder above it reopens. This feature reads
 Viewed states from Pull request sidebar metadata, so that feature must stay on.
@@ -187,6 +187,19 @@ moves a tab that is already in a group.
 Nothing happens when no group holds the pull request, when its tabs are spread
 across more than one group, or when the only group is in another window.
 Pinned tabs are left alone.
+
+### Performance log
+
+Off by default. For tracking down a slow or crashing GitHub tab: while
+**Performance log** is on (under Features in the popup, then reload the tab),
+every GitHub page records a sample every 5 seconds: JS heap, DOM size, how
+often the page changes, long tasks, how late the sample timer ran (a sign the
+page is blocked), and the time each GitHub Tweaks feature spent in its page
+observers and syncs. Any single step slower than 200 ms, and bursts of page
+changes, are recorded right away. Entries go to extension storage through the
+background worker, so they survive a crashed tab; **Copy performance log**
+under Diagnostics copies the last 2,000. The popup also shows when the
+installed build was made.
 
 ## Install for local use
 

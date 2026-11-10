@@ -130,6 +130,48 @@ export interface TabGroupOrganizeResult {
   groups: number;
 }
 
+/** Time spent in one feature's observer callbacks or sync/render work during a sample. */
+export interface PerfWorkStat {
+  key: string;
+  calls: number;
+  ms: number;
+  maxMs: number;
+  records: number;
+}
+
+interface PerfLogBase {
+  /** One page load's content script. */
+  session: string;
+  at: string;
+  /** Seconds since the session started. */
+  t: number;
+}
+
+export type PerfLogEntry =
+  | (PerfLogBase & { kind: 'start'; url: string; build: string; userAgent: string })
+  | (PerfLogBase & {
+      kind: 'sample';
+      url: string;
+      hidden: boolean;
+      heapMB: number | null;
+      domNodes: number;
+      extensionNodes: Record<string, number>;
+      pageMutationsPerSec: number;
+      pageAddedPerSec: number;
+      pageRemovedPerSec: number;
+      extensionWritesPerSec: number;
+      topAttributes: string[];
+      longTaskMs: number;
+      /** How much later than planned this sample ran; large values mean the page was blocked. */
+      timerLateMs: number;
+      work: PerfWorkStat[];
+    })
+  | (PerfLogBase & { kind: 'slow'; key: string; ms: number })
+  | (PerfLogBase & { kind: 'burst'; key: string; records: number })
+  | (PerfLogBase & { kind: 'end'; reason: 'pagehide' | 'stopped' });
+
+export type StoredPerfLogEntry = PerfLogEntry & { tabId: number | null };
+
 export type BackgroundRequest =
   | { type: 'open-in-cursor'; target: OpenTarget }
   | { type: 'checkout:status'; target: CheckoutTarget }
@@ -165,6 +207,9 @@ export type BackgroundRequest =
   | { type: 'tab-groups:auto-join'; url: string }
   | { type: 'tab-groups:undo'; groupId: number; originalIndex: number }
   | { type: 'tab-groups:organize-window'; windowId: number }
+  | { type: 'perf-log:append'; entries: PerfLogEntry[] }
+  | { type: 'perf-log:get' }
+  | { type: 'perf-log:clear' }
   | { type: 'pins:get'; owner: string; repository: string }
   | {
       type: 'pins:save';

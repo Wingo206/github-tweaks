@@ -6,6 +6,13 @@
 
 const COPY_HEAD_LABEL = 'Copy head branch name to clipboard';
 
+/**
+ * Everything these anchors live in: the main header (and the classic sticky
+ * header), GitHub's sticky bar, and the classic Files changed toolbar.
+ */
+export const PR_HEADER_AREAS =
+  '[data-component="PageHeader"], [data-testid="diff-comparison-viewer-sticky-header-slot"], section';
+
 export interface HeadBranchMount {
   /** The copy button's tooltip (or the button itself). */
   anchor: Element;

@@ -67,6 +67,11 @@ export class AutoCollapseState {
     }
   }
 
+  /** Puts back a reopen that `changes` returned but that was not applied yet. */
+  deferReopen(path: string): void {
+    this.reopen.add(path);
+  }
+
   /** The rows whose open state should change, with the state to set. */
   changes(rows: readonly FolderRowState[]): FolderRowState[] {
     const changes: FolderRowState[] = [];

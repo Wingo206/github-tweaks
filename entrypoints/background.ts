@@ -28,6 +28,7 @@ import {
   startCheckout,
 } from '../src/companion/client';
 import { resolveOpenTarget } from '../src/companion/resolveTarget';
+import { appendPerfLog, clearPerfLog, readPerfLog } from '../src/diagnostics/log';
 import {
   chromeTabGroupsApi,
   TabGroupOrganizer,
@@ -184,6 +185,12 @@ async function handleRequest(
     }
     case 'tab-groups:organize-window':
       return tabGroups.organizeWindow(request.windowId);
+    case 'perf-log:append':
+      return appendPerfLog(request.entries, sender.tab?.id ?? null);
+    case 'perf-log:get':
+      return readPerfLog();
+    case 'perf-log:clear':
+      return clearPerfLog();
     case 'pins:get':
       return getPeoplePins(request.owner, request.repository);
     case 'pins:save':

@@ -8,7 +8,7 @@ export const TREE_ROOT_SELECTOR = '#pr-file-tree';
 const TREE_SELECTOR = 'ul[role="tree"]';
 const TREE_ROW_SELECTOR = 'li[role="treeitem"]';
 const ROW_BOX_SELECTOR = ':scope > .PRIVATE_TreeView-item-container';
-const DIFF_SELECTOR = 'div[role="region"][id^="diff-"]';
+export const DIFF_SELECTOR = 'div[role="region"][id^="diff-"]';
 const TOOLBAR_SELECTOR =
   'section[class^="stickyHeader__"], section[class*=" stickyHeader__"]';
 
@@ -150,8 +150,14 @@ export class TreeViewportBand {
       host.append(this.band);
     }
 
-    this.band.style.top = `${extent.top}px`;
-    this.band.style.height = `${extent.bottom - extent.top}px`;
+    const top = `${extent.top}px`;
+    const height = `${extent.bottom - extent.top}px`;
+    if (this.band.style.top !== top) {
+      this.band.style.top = top;
+    }
+    if (this.band.style.height !== height) {
+      this.band.style.height = height;
+    }
   }
 
   clear(): void {

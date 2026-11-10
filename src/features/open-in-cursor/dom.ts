@@ -255,12 +255,24 @@ export function filePathForElement(element: Element): string | null {
   return header ? filePathForHeader(header) : null;
 }
 
+/** Answers per diff, kept once its lines have loaded and the answer can't change. */
+const deletedFiles = new WeakMap<Element, boolean>();
+
 /** Rendered cells exist but none on the right side: the file was deleted. */
 export function isDeletedFile(section: Element): boolean {
-  return (
-    section.querySelector(LINE_CELL_SELECTOR) !== null &&
-    section.querySelector(RIGHT_CELL_SELECTOR) === null
-  );
+  const known = deletedFiles.get(section);
+  if (known !== undefined) {
+    return known;
+  }
+  if (section.querySelector(RIGHT_CELL_SELECTOR)) {
+    deletedFiles.set(section, false);
+    return false;
+  }
+  const deleted = section.querySelector(LINE_CELL_SELECTOR) !== null;
+  if (deleted) {
+    deletedFiles.set(section, true);
+  }
+  return deleted;
 }
 
 export function firstChangedLine(section: Element): number {

@@ -59,6 +59,7 @@ src/
     registry.ts             feature ids, popup labels, default on/off
     flags.ts                persisted on/off toggles (read at page load)
     <feature-id>/           model, DOM, controller, styles.css, tests
+  diagnostics/              performance log: content-side recorder, background storage
   github/                   GraphQL, pull request API, cache, and unit tests
   companion/                background-worker client for the Cursor companion
   shared/                   message and domain types
@@ -189,6 +190,12 @@ hashes. DOM adapters must:
 - never depend on generated hash suffixes, React IDs, or `nth-child`
 - make injection idempotent with a namespaced marker
 - disconnect or filter observers around extension-owned mutations
+- only write to the DOM when a value actually changes (setting an attribute
+  or `textContent` to the same value still notifies every page observer)
+- react only to changes in the part of the page a feature uses, with
+  `touches()` from `src/shared/mutations.ts`; large pull requests change the
+  page constantly, and a whole-page re-scan on every change starves the main
+  thread
 - clean up everything in `stop`
 - preserve keyboard access and accessible names
 
@@ -313,5 +320,11 @@ integration contract.
   Authorization header or token.
 - **Selector breakage:** compare live markup with `tests/fixtures`, focusing on
   semantic anchors before changing selectors.
+- **Slow or crashing tabs:** turn on **Performance log**, reload the tab, reproduce,
+  then **Copy performance log** in the popup. Each sample's `work` list names the
+  feature steps that took the most time. Create page observers with
+  `trackedObserver(featureId, …)` and wrap queued syncs or renders in
+  `tracked(featureId, label, …)` (both in `src/diagnostics/recorder.ts`) so new
+  features show up there too; while the log is off they just call through.
 
 Production artifacts are generated files and should not be committed.

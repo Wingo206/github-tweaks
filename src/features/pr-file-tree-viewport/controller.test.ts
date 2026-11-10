@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TreeViewportController } from './controller';
 import { MARKER } from './dom';
 
@@ -102,6 +102,21 @@ describe('TreeViewportController', () => {
     controller.start();
 
     expect(band()).toBeNull();
+  });
+
+  it('refreshes for changes in the diffs or tree, not elsewhere on the page', async () => {
+    layout({ 'diff-app': [100, 1800] });
+    controller.start();
+    const refresh = vi.spyOn(controller, 'refresh');
+    const nextFrame = () => new Promise((done) => requestAnimationFrame(() => done(undefined)));
+
+    document.body.insertAdjacentHTML('beforeend', '<span data-component="Tooltip" popover="auto">tip</span>');
+    await nextFrame();
+    expect(refresh).not.toHaveBeenCalled();
+
+    document.getElementById('diff-app')!.append(document.createElement('div'));
+    await nextFrame();
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('cleans up on stop', () => {

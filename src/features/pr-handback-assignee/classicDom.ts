@@ -18,6 +18,7 @@ export const ASSIGNEES_ROOT_SELECTOR =
 export const ASSIGNEES_FORM_SELECTOR = 'form[aria-label="Select assignees"]';
 
 export const classicAssignees: AssigneesAdapter = {
+  area: '.discussion-sidebar-item',
   findRoot: findAssigneesRoot,
   sync: syncHandbackUi,
   async refresh(root) {

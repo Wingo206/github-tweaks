@@ -1,3 +1,4 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
 import type { PinnedPerson, PullRequestRef } from '../../shared/types';
 import { clearPeoplePins, readPerson, syncPeoplePins } from './dom';
@@ -177,7 +178,7 @@ export class PeoplePinsController {
       return;
     }
 
-    this.observer ??= new MutationObserver(() => {
+    this.observer ??= trackedObserver('pr-people-pins-classic', () => {
       this.queueSync();
     });
     this.observer.observe(document.body, {
@@ -192,9 +193,11 @@ export class PeoplePinsController {
     }
 
     this.syncQueued = true;
-    window.requestAnimationFrame(() => {
-      this.syncQueued = false;
-      this.sync();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-people-pins-classic', 'sync', () => {
+        this.syncQueued = false;
+        this.sync();
+      }),
+    );
   }
 }

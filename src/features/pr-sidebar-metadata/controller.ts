@@ -1,3 +1,4 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { sendBackgroundMessage } from '../../shared/messaging';
 import type {
   PageStatus,
@@ -17,6 +18,37 @@ import {
   isViewed,
   updateFileViewedState,
 } from './model';
+
+/** What the sidebar renders into or reads from: tree rows, diff headers, the toolbar. */
+const RENDERED_SURFACES =
+  '#pr-file-tree, li[role="treeitem"], [data-diff-header-wrapper="true"], h2.sr-only';
+const OWN_UI = '[data-ght-pr-metadata]';
+
+/**
+ * Re-render only when GitHub adds tree rows, diff headers, or its toolbar, or
+ * removes this feature's UI. GitHub adds unrelated nodes (tooltips) all the
+ * time, and a full render on each one swamps large pull requests.
+ */
+function needsRender(mutation: MutationRecord): boolean {
+  for (const node of mutation.removedNodes) {
+    if (node instanceof Element && (node.matches(OWN_UI) || node.querySelector(OWN_UI))) {
+      return true;
+    }
+  }
+  for (const node of mutation.addedNodes) {
+    if (!(node instanceof Element) || node.closest(OWN_UI)) {
+      continue;
+    }
+    if (
+      node.matches(RENDERED_SURFACES) ||
+      node.querySelector(RENDERED_SURFACES) ||
+      node.closest('#pr-file-tree')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /** How long to wait for GitHub to answer a native Viewed click before retrying. */
 const NATIVE_CLICK_TIMEOUT_MS = 1000;
@@ -197,7 +229,7 @@ export class PrSidebarController {
       return;
     }
 
-    this.observer ??= new MutationObserver((mutations) => {
+    this.observer ??= trackedObserver('pr-sidebar-metadata', (mutations) => {
       for (const mutation of mutations) {
         if (
           mutation.type === 'attributes' &&
@@ -208,14 +240,7 @@ export class PrSidebarController {
           continue;
         }
 
-        if (
-          mutation.type === 'childList' &&
-          Array.from(mutation.addedNodes).some(
-            (node) =>
-              node instanceof Element &&
-              !node.closest('[data-ght-pr-metadata]'),
-          )
-        ) {
+        if (mutation.type === 'childList' && needsRender(mutation)) {
           this.queueRender();
         }
       }
@@ -235,11 +260,13 @@ export class PrSidebarController {
     }
 
     this.renderQueued = true;
-    window.requestAnimationFrame(() => {
-      this.renderQueued = false;
-      this.renderCurrent();
-      this.syncNativeButtons();
-    });
+    window.requestAnimationFrame(() =>
+      tracked('pr-sidebar-metadata', 'render', () => {
+        this.renderQueued = false;
+        this.renderCurrent();
+        this.syncNativeButtons();
+      }),
+    );
   }
 
   private setViewedFromSidebar(path: string, viewed: boolean): void {

@@ -122,6 +122,29 @@ describe('GitHub DOM adapter and renderer', () => {
     expect(folder.classList.contains('ght-pr-tree-row--viewed')).toBe(false);
   });
 
+  it('leaves the DOM untouched when a render changes nothing', () => {
+    document.body.innerHTML = sidebarFixture;
+    const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
+      onRetry: vi.fn(),
+      onOpenSetup: vi.fn(),
+    });
+    renderer.render(snapshot);
+
+    const observer = new MutationObserver(() => {});
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
+    renderer.render(snapshot);
+    renderer.render(snapshot);
+    const records = observer.takeRecords();
+    observer.disconnect();
+    expect(records).toEqual([]);
+  });
+
   it('replaces folder totals when a commit filter shrinks the file set', () => {
     document.body.innerHTML = sidebarFixture;
     const renderer = new SidebarRenderer({

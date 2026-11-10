@@ -1,3 +1,4 @@
+import { tracked, trackedObserver } from '../../diagnostics/recorder';
 import { requestRenderedSvg } from './bridge';
 import { logMermaidViewerFailure } from './errors';
 import {
@@ -117,7 +118,7 @@ export class MermaidFullscreenController {
 
   private observeDocument(): void {
     this.observer?.disconnect();
-    this.observer = new MutationObserver(() => this.queueScan());
+    this.observer = trackedObserver('mermaid-fullscreen', () => this.queueScan());
     this.observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
@@ -129,12 +130,14 @@ export class MermaidFullscreenController {
       return;
     }
     this.scanQueued = true;
-    queueMicrotask(() => {
-      this.scanQueued = false;
-      if (!this.stopped) {
-        this.scan();
-      }
-    });
+    queueMicrotask(() =>
+      tracked('mermaid-fullscreen', 'scan', () => {
+        this.scanQueued = false;
+        if (!this.stopped) {
+          this.scan();
+        }
+      }),
+    );
   }
 
   private scan(): void {

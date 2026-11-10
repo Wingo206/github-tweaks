@@ -89,7 +89,7 @@ export class SidebarRenderer {
   }
 
   private clearRowMetadata(row: HTMLElement): void {
-    row.classList.remove(VIEWED_ROW_CLASS);
+    row.classList.toggle(VIEWED_ROW_CLASS, false);
     const container = findContentContainer(row);
     if (!container) {
       return;
@@ -173,22 +173,25 @@ export class SidebarRenderer {
       : '…';
 
     if (viewedCount) {
-      viewedCount.textContent = viewedLabel;
+      setText(viewedCount, viewedLabel);
     }
     if (totalCount) {
-      totalCount.textContent = totalLabel;
+      setText(totalCount, totalLabel);
     }
     if (ringValue) {
       const offset =
         ratio === null
           ? PROGRESS_RING_CIRCUMFERENCE
           : PROGRESS_RING_CIRCUMFERENCE * (1 - ratio);
-      ringValue.setAttribute('stroke-dashoffset', String(offset));
+      setAttribute(ringValue, 'stroke-dashoffset', String(offset));
     }
     if (srOnly) {
-      srOnly.textContent = progress
-        ? `${viewedLabel} of ${totalLabel} changes viewed`
-        : 'Line view progress loading';
+      setText(
+        srOnly,
+        progress
+          ? `${viewedLabel} of ${totalLabel} changes viewed`
+          : 'Line view progress loading',
+      );
     }
   }
 
@@ -240,14 +243,20 @@ export class SidebarRenderer {
       '.ght-pr-metadata__viewed input',
     );
     if (checkbox) {
-      checkbox.checked = isViewed(file.viewedState);
-      checkbox.setAttribute(
+      const viewed = isViewed(file.viewedState);
+      if (checkbox.checked !== viewed) {
+        checkbox.checked = viewed;
+      }
+      setAttribute(
+        checkbox,
         'aria-label',
-        `${checkbox.checked ? 'Unmark' : 'Mark'} ${file.path} as viewed`,
+        `${viewed ? 'Unmark' : 'Mark'} ${file.path} as viewed`,
       );
-      checkbox.parentElement!.title =
-        error ??
-        (checkbox.checked ? 'Unmark file as viewed' : 'Mark file as viewed');
+      setAttribute(
+        checkbox.parentElement!,
+        'title',
+        error ?? (viewed ? 'Unmark file as viewed' : 'Mark file as viewed'),
+      );
     }
   }
 
@@ -288,8 +297,9 @@ export class SidebarRenderer {
         aggregate.deletions,
         'No remaining changes in unviewed files',
       );
-      counts.title = 'Remaining changes in unviewed files';
-      counts.setAttribute(
+      setAttribute(counts, 'title', 'Remaining changes in unviewed files');
+      setAttribute(
+        counts,
         'aria-label',
         `${aggregate.additions} additions and ${aggregate.deletions} deletions remaining in unviewed files`,
       );
@@ -299,12 +309,10 @@ export class SidebarRenderer {
       '.ght-pr-metadata__progress',
     );
     if (progress) {
-      progress.textContent = `${aggregate.viewed}/${aggregate.total}`;
-      progress.title = `${aggregate.viewed} of ${aggregate.total} files viewed`;
-      progress.setAttribute(
-        'aria-label',
-        `${aggregate.viewed} of ${aggregate.total} files viewed`,
-      );
+      const label = `${aggregate.viewed} of ${aggregate.total} files viewed`;
+      setText(progress, `${aggregate.viewed}/${aggregate.total}`);
+      setAttribute(progress, 'title', label);
+      setAttribute(progress, 'aria-label', label);
     }
   }
 
@@ -457,12 +465,34 @@ function findDirectMetadata(container: HTMLElement): HTMLElement | null {
   ) as HTMLElement | null;
 }
 
+/**
+ * Every write is skipped when the value is already there: GitHub re-renders
+ * often, and an unchanged render must not touch the DOM, or every page
+ * observer (GitHub's and ours) reacts to thousands of no-op mutations.
+ */
+function setText(element: Element, text: string): void {
+  if (element.textContent !== text) {
+    element.textContent = text;
+  }
+}
+
+function setAttribute(element: Element, name: string, value: string): void {
+  if (element.getAttribute(name) !== value) {
+    element.setAttribute(name, value);
+  }
+}
+
 function renderCounts(
   container: HTMLElement,
   additions: number,
   deletions: number,
   zeroTitle = 'Line counts unavailable',
 ): void {
+  const key = `${additions}:${deletions}:${zeroTitle}`;
+  if (container.dataset.ghtCounts === key) {
+    return;
+  }
+  container.dataset.ghtCounts = key;
   container.replaceChildren();
   if (additions === 0 && deletions === 0) {
     const unavailable = document.createElement('span');

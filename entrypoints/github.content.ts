@@ -1,3 +1,5 @@
+import { PerfLogFeature } from '../src/diagnostics';
+import { trackedObserver } from '../src/diagnostics/recorder';
 import { getFeatureFlags } from '../src/features/flags';
 import { FeatureRunner } from '../src/features/runner';
 import { MermaidFullscreenFeature } from '../src/features/mermaid-fullscreen';
@@ -47,9 +49,13 @@ export default defineContentScript({
       'pr-tab-favicon': new PrTabFaviconFeature(),
       'pr-sticky-tabs': new PrStickyTabsFeature(),
       'pr-tab-groups': new PrTabGroupsFeature(),
+      'perf-log': new PerfLogFeature(),
     };
+    // The performance log starts first, so it also times the others starting.
     const runner = new FeatureRunner(
-      FEATURES.filter(({ id }) => flags[id]).map(({ id }) => features[id]),
+      FEATURES.filter(({ id }) => flags[id])
+        .sort((left, right) => Number(right.id === 'perf-log') - Number(left.id === 'perf-log'))
+        .map(({ id }) => features[id]),
     );
     let lastUrl = window.location.href;
     let syncQueued = false;
@@ -67,7 +73,7 @@ export default defineContentScript({
 
     void runner.sync();
 
-    const navigationObserver = new MutationObserver(() => {
+    const navigationObserver = trackedObserver('navigation', () => {
       if (window.location.href !== lastUrl) {
         lastUrl = window.location.href;
         sync();
