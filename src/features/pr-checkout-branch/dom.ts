@@ -1,4 +1,4 @@
-import { findHeadBranchMounts } from '../../shared/prHeader';
+import { findHeadBranchMounts, findStickyBarTitleBlocks } from '../../shared/prHeader';
 import type { MenuEntry } from './model';
 
 export const MARKER = 'data-ght-checkout-branch';
@@ -9,11 +9,20 @@ const CHECKOUT_ICON =
 const CHECK_ICON =
   '<svg aria-hidden="true" focusable="false" class="octicon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
 
-/** Inserts a button after each mount's anchor once; returns every button in `root`. */
+/**
+ * Inserts a button once after each "Copy head branch name" control, and at the
+ * end of GitHub's sticky bar title block (which doesn't show the branch).
+ * Returns every button in `root`.
+ */
 export function syncButtons(root: ParentNode, create: () => HTMLButtonElement): HTMLButtonElement[] {
   for (const { anchor } of findHeadBranchMounts(root)) {
     if (!anchor.parentElement?.querySelector(`[${MARKER}="button"]`)) {
       anchor.after(create());
+    }
+  }
+  for (const block of findStickyBarTitleBlocks(root)) {
+    if (!block.querySelector(`:scope > [${MARKER}="button"]`)) {
+      block.append(create());
     }
   }
   return [...root.querySelectorAll<HTMLButtonElement>(`button[${MARKER}="button"]`)];

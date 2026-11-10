@@ -398,6 +398,30 @@ export function syncChangesThreads(root: ParentNode, ref: PullRequestRef, open: 
   }
 }
 
+const JUMP_TO_DIFF_LABEL = /^Jump to the comment in the diff for (.+), line (\d+)$/;
+
+/**
+ * Review threads on Overview (in the page and in the comments panel): the
+ * button goes after the header's "Jump to the comment in the diff" link,
+ * whose URL ends in `#r<comment id>`.
+ */
+export function syncOverviewThreads(root: ParentNode, ref: PullRequestRef, open: Opener): void {
+  for (const link of root.querySelectorAll<HTMLAnchorElement>('a[aria-label^="Jump to the comment in the diff for "][href*="#r"]')) {
+    const row = link.parentElement;
+    const commentId = parseCommentElementId(new URL(link.href, window.location.origin).hash.slice(1));
+    if (!row || !commentId || row.querySelector(`[${MARKER}="overview-thread"]`)) {
+      continue;
+    }
+    const label = link.getAttribute('aria-label')?.match(JUMP_TO_DIFF_LABEL);
+    const fallback = label ? { path: label[1]!, line: Number(label[2]) } : null;
+    const button = createIconButton('overview-thread', 'invisible');
+    bindButton(button, () => ({ kind: 'pr-comment', ...ref, commentId, fallback }), open);
+    const tooltip = link.nextElementSibling?.matches('[data-component="Tooltip"]') ? link.nextElementSibling : null;
+    (tooltip ?? link).after(button);
+  }
+}
+
+/** TODO(classic-4): review threads on the classic Conversation tab. */
 export function syncConversationThreads(root: ParentNode, ref: PullRequestRef, open: Opener): void {
   for (const thread of root.querySelectorAll<HTMLElement>('review-thread-collapsible')) {
     const row = thread.firstElementChild;
@@ -415,6 +439,7 @@ export function syncConversationThreads(root: ParentNode, ref: PullRequestRef, o
   }
 }
 
+/** TODO(classic-4) */
 export function conversationCommentId(thread: Element): string | null {
   const rendered = thread.querySelector('[id^="discussion_r"]');
   const fromElement = rendered ? parseCommentElementId(rendered.id) : null;

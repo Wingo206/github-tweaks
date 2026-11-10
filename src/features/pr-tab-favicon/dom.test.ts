@@ -54,7 +54,7 @@ describe('PrTabMarker', () => {
   });
 
   it('switches tab without losing the originals', async () => {
-    const tabMarker = start('conversation');
+    const tabMarker = start('overview');
     tabMarker.setTab('commits');
     await flush();
 
@@ -107,7 +107,7 @@ describe('PrTabMarker', () => {
   });
 
   it('shows the diagram badge while the Mermaid viewer is open', async () => {
-    const tabMarker = start('conversation');
+    const tabMarker = start('overview');
     await flush();
 
     document.documentElement.classList.add(MERMAID_OPEN_CLASS);
@@ -127,7 +127,7 @@ describe('PrTabMarker', () => {
 
   it('starts in diagram mode when the viewer is already open, and restores on stop', async () => {
     document.documentElement.classList.add(MERMAID_OPEN_CLASS);
-    const tabMarker = start('conversation');
+    const tabMarker = start('overview');
     await flush();
     expect(hrefs()).toEqual([renderFavicon('diagram'), renderFavicon('diagram')]);
 

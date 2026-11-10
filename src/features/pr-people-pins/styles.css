@@ -1,67 +1,135 @@
-.hx_rsm-content label.select-menu-item:has(> button.ght-pins__button),
-details-menu.select-menu-modal label.select-menu-item:has(> button.ght-pins__button) {
+/* Pin toggles inside GitHub's own picker options. */
+#__primerPortalRoot__ li[role="option"]:has(> [data-ght-pp-pin]) {
   position: relative;
-  padding-right: 32px;
 }
 
-.hx_rsm-content label.select-menu-item[data-ght-pinned-row],
-details-menu.select-menu-modal label.select-menu-item[data-ght-pinned-row] {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
+#__primerPortalRoot__ li[role="option"]:has(> [data-ght-pp-pin]) > :first-child {
+  padding-inline-end: 32px;
 }
 
-.hx_rsm-content [data-ght-pinned-row] .select-menu-item-gravatar,
-details-menu.select-menu-modal [data-ght-pinned-row] .select-menu-item-gravatar {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-}
-
-.hx_rsm-content [data-ght-pinned-row] img.js-avatar,
-details-menu.select-menu-modal [data-ght-pinned-row] img.js-avatar {
-  width: 20px;
-  height: 20px;
-  max-width: 20px;
-  border-radius: 50%;
-}
-
-.hx_rsm-content [data-ght-pinned-row] .select-menu-item-text,
-details-menu.select-menu-modal [data-ght-pinned-row] .select-menu-item-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.hx_rsm-content label.select-menu-item > button.ght-pins__button,
-details-menu.select-menu-modal label.select-menu-item > button.ght-pins__button {
+#__primerPortalRoot__ li[role="option"] > [data-ght-pp-pin] {
   position: absolute;
-  top: 50%;
   right: 8px;
+  top: 50%;
   transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--fgColor-muted, #656d76);
-  line-height: 0;
-  cursor: pointer;
-  z-index: 1;
+  opacity: 0;
 }
 
-.hx_rsm-content label.select-menu-item > button.ght-pins__button[aria-pressed='true'],
-details-menu.select-menu-modal label.select-menu-item > button.ght-pins__button[aria-pressed='true'] {
+#__primerPortalRoot__ li[role="option"]:hover > [data-ght-pp-pin],
+#__primerPortalRoot__ li[role="option"][data-is-active-descendant] > [data-ght-pp-pin],
+#__primerPortalRoot__ li[role="option"] > [data-ght-pp-pin][aria-pressed="true"] {
+  opacity: 1;
+}
+
+.ght-pp__button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--fgColor-muted, #59636e);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 24px;
+  justify-content: center;
+  padding: 0;
+  width: 24px;
+}
+
+.ght-pp__button:hover {
+  background: var(--control-transparent-bgColor-hover, rgba(129, 139, 152, 0.15));
+  color: var(--fgColor-default, #1f2328);
+}
+
+.ght-pp__button[aria-pressed="true"] {
   color: var(--fgColor-accent, #0969da);
 }
 
-.hx_rsm-content label.select-menu-item:hover > button.ght-pins__button,
-.hx_rsm-content label.select-menu-item:focus-within > button.ght-pins__button,
-details-menu.select-menu-modal label.select-menu-item:hover > button.ght-pins__button,
-details-menu.select-menu-modal label.select-menu-item:focus-within > button.ght-pins__button {
-  color: inherit;
+/* The Pinned section between GitHub's filter box and its list. */
+.ght-pp {
+  border-bottom: 1px solid var(--borderColor-muted, rgba(209, 217, 224, 0.7));
+  flex-shrink: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+
+.ght-pp__heading {
+  color: var(--fgColor-muted, #59636e);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px 4px;
+}
+
+.ght-pp__row {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+}
+
+.ght-pp__row:hover {
+  background: var(--control-transparent-bgColor-hover, rgba(129, 139, 152, 0.15));
+}
+
+.ght-pp__select {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--fgColor-default, #1f2328);
+  cursor: pointer;
+  display: flex;
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 14px;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.ght-pp__select:focus-visible,
+.ght-pp__button:focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: -2px;
+}
+
+/* Drawn like GitHub's own multi-select checkboxes in the list below. */
+.ght-pp__check {
+  align-items: center;
+  border: 1px solid var(--control-borderColor-emphasis, #818b98);
+  border-radius: 4px;
+  color: transparent;
+  display: inline-flex;
+  flex: none;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.ght-pp__check svg {
+  height: 12px;
+  width: 12px;
+}
+
+.ght-pp__select[aria-pressed="true"] .ght-pp__check {
+  background: var(--control-checked-bgColor-rest, #0969da);
+  border-color: var(--control-checked-bgColor-rest, #0969da);
+  color: var(--control-checked-fgColor-rest, #fff);
+}
+
+.ght-pp__avatar {
+  border-radius: 50%;
+  flex: none;
+}
+
+.ght-pp__login {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ght-pp__name {
+  color: var(--fgColor-muted, #59636e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

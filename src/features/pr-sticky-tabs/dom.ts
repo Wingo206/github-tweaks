@@ -1,4 +1,4 @@
-import { findHeadBranchMounts } from '../../shared/prHeader';
+import { findHeadBranchMounts, findStickyBarTitleBlocks } from '../../shared/prHeader';
 import {
   accessibleName,
   formatLineCount,
@@ -12,7 +12,7 @@ import {
 export const MARKER = 'data-ght-sticky-tabs';
 const KEY = 'data-ght-pst-key';
 
-/** GitHub gives these two tab links fixed IDs; their parent holds every tab. */
+/** GitHub gives these two tab links fixed IDs; their `nav` holds every tab. */
 const NATIVE_TAB_ANCHORS = '#prs-files-anchor-tab, #prs-commits-anchor-tab';
 const FILES_TAB_ID = 'prs-files-anchor-tab';
 
@@ -23,21 +23,20 @@ export interface NativeTab extends StickyTab {
 
 /** GitHub's own tab links, in order, or none when its tab bar is not on the page. */
 export function findNativeTabs(root: ParentNode): NativeTab[] {
-  const list = root.querySelector(NATIVE_TAB_ANCHORS)?.parentElement;
-  if (!list) {
+  const nav = root.querySelector(NATIVE_TAB_ANCHORS)?.closest('nav');
+  if (!nav) {
     return [];
   }
-  return [...list.querySelectorAll<HTMLAnchorElement>(':scope > a[href]')].map(readTab);
+  return [...nav.querySelectorAll<HTMLAnchorElement>('a[href]')].map(readTab);
 }
 
 /**
- * The pull request's line totals from the main header, beside GitHub's tab
- * bar. Diff file headers reuse the same "Lines changed" text, so the search
- * stays inside the header's navigation area.
+ * The pull request's line totals from the main header. Diff file headers
+ * reuse the same "Lines changed" text, so the search stays inside the header.
  */
 export function findNativeLineCounts(root: ParentNode): LineCounts | null {
-  const navigation = root.querySelector(NATIVE_TAB_ANCHORS)?.closest('[data-component="PH_Navigation"]');
-  for (const label of navigation?.querySelectorAll('.sr-only') ?? []) {
+  const header = root.querySelector(NATIVE_TAB_ANCHORS)?.closest('[data-component="PageHeader"]');
+  for (const label of header?.querySelectorAll('.sr-only') ?? []) {
     const counts = parseLineCounts(label.textContent ?? '');
     if (counts) {
       return counts;
@@ -52,40 +51,57 @@ export function showsLineCounts(tabs: readonly NativeTab[]): boolean {
 }
 
 function readTab(link: HTMLAnchorElement): NativeTab {
-  const label = [...link.childNodes]
-    .filter((node) => node.nodeType === Node.TEXT_NODE)
-    .map((node) => node.textContent ?? '')
-    .join('')
-    .trim();
   const svg = link.querySelector('svg');
   return {
     link,
     svg,
     href: link.getAttribute('href') ?? '',
-    label,
+    label: tabLabel(link),
     count: link.querySelector('[data-component="CounterLabel"]')?.textContent?.trim() || null,
     current: link.getAttribute('aria-current') === 'page',
     icon: svg ? ([...svg.classList].find((name) => name.startsWith('octicon-')) ?? null) : null,
   };
 }
 
+function tabLabel(link: HTMLAnchorElement): string {
+  const text = link.querySelector('[data-component="text"]');
+  if (text) {
+    return text.textContent?.trim() ?? '';
+  }
+  // TODO(classic-1): classic tab links hold their label as a bare text node.
+  return [...link.childNodes]
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent ?? '')
+    .join('')
+    .trim();
+}
+
 /**
- * The branch group in each sticky header's summary row; tabs go right after
- * it, so after the copy and checkout buttons inside it. A sticky header has a
- * `#top` title link and no tab bar; the main header is the other way round.
+ * Where the tabs go in each sticky header: after the title block of GitHub's
+ * sticky bar, or after the branch group of a classic sticky header.
  */
 export function findStickyMounts(root: ParentNode): Element[] {
+  return [...findStickyBarTitleBlocks(root), ...findClassicStickyMounts(root)];
+}
+
+/**
+ * TODO(classic-1): the classic sticky header (and the stuck Files changed
+ * toolbar) repeats the branch summary; it has a `#top` title link and no tab
+ * bar, while the main header is the other way round.
+ */
+function findClassicStickyMounts(root: ParentNode): Element[] {
   return findHeadBranchMounts(root).flatMap(({ link }) => {
     const header = link.closest('[data-component="PageHeader"], section');
     if (!header?.querySelector('a[href="#top"]') || header.querySelector(NATIVE_TAB_ANCHORS)) {
       return [];
     }
-    const group = branchGroup(link, header);
+    const group = classicBranchGroup(link, header);
     return group ? [group] : [];
   });
 }
 
-function branchGroup(link: Element, header: Element): Element | null {
+/** TODO(classic-1) */
+function classicBranchGroup(link: Element, header: Element): Element | null {
   for (let element = link.parentElement; element && element !== header; element = element.parentElement) {
     if (element.querySelectorAll('a[data-component="BranchName"]').length >= 2) {
       return element;

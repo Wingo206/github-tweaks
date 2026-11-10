@@ -1,0 +1,56 @@
+<div data-component="PageHeader" data-has-nav="">
+  <div data-component="TitleArea">
+    <h1 data-component="Heading"><span class="markdown-title" data-component="Text">Add widget support</span><span class="sr-only"> - #42</span></h1>
+  </div>
+  <div class="d-flex flex-column flex-items-start" data-component="PageHeader.Description">
+    <div class="d-flex width-full flex-items-center gap-2 flex-wrap min-width-0">
+      <div>
+        <div class="fgColor-muted d-flex flex-items-center">
+          <div>
+            <button type="button" aria-label="Pull request state: Open" aria-haspopup="true" aria-expanded="false"><span data-component="StateLabel" data-size="medium" data-status="pullOpened">Open</span></button>
+            <span><a class="text-bold" data-component="Link" href="/octocat" data-hovercard-type="user">octocat</a><span> opened today</span></span>
+          </div>
+          <div>
+            <div class="d-flex flex-items-center gap-1">
+              <span><span class="sr-only user-select-none">Base branch:</span><a href="/acme/widgets/tree/main" aria-describedby="tip-base" data-component="BranchName">main</a><span data-direction="s" data-component="Tooltip" role="tooltip" aria-hidden="true" id="tip-base" popover="auto">acme/widgets:main</span><svg class="octicon octicon-arrow-left" aria-hidden="true"></svg></span>
+              <span><span class="sr-only user-select-none">Head branch:</span><span><a href="/acme/widgets/tree/feature/x" aria-describedby="tip-head" data-component="BranchName">feature/x</a><span data-direction="s" data-component="Tooltip" role="tooltip" aria-hidden="true" id="tip-head" popover="auto">acme/widgets:feature/x</span><button data-component="IconButton" type="button" data-size="small" data-variant="invisible" aria-labelledby="tip-copy-head"><svg class="octicon octicon-copy" aria-hidden="true"></svg></button><span data-direction="s" data-component="Tooltip" aria-label="Copy head branch name to clipboard" aria-hidden="true" id="tip-copy-head" popover="auto">Copy head branch name to clipboard</span></span></span>
+            </div>
+            <div><span aria-hidden="true" class="f6 fgColor-success text-bold">+1,479</span><span aria-hidden="true" class="f6 fgColor-danger text-bold">-1</span><span class="sr-only">Lines changed: 1479 additions &amp; 1 deletion</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div data-component="PH_Navigation">
+    <div></div>
+    <div class="flex-auto">
+      <h2>Pull request navigation</h2>
+      <nav aria-label="Pull request" data-variant="flush" data-overflow-mode="wrap">
+        <ul role="list">
+          <li role="presentation" aria-hidden="true"></li>
+          <li><a aria-current="page" class="position-relative flex-shrink-0 text-normal" href="/acme/widgets/pull/42"><span data-component="icon"><svg data-component="Octicon" aria-hidden="true" focusable="false" class="octicon octicon-tasklist" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="vertical-align:text-bottom"><path d="M2 2h12v12H2z"></path></svg></span><span data-component="text" data-content="Overview">Overview</span></a></li>
+          <li><a id="prs-commits-anchor-tab" class="position-relative flex-shrink-0 text-normal" href="/acme/widgets/pull/42/commits"><span data-component="icon"><svg data-component="Octicon" aria-hidden="true" focusable="false" class="octicon octicon-git-commit" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 7h8v2H4z"></path></svg></span><span data-component="text" data-content="Commits">Commits</span><span data-component="counter"><span aria-hidden="true" data-variant="secondary" data-component="CounterLabel">2</span><span>&nbsp;(2)</span></span></a></li>
+          <li><a class="position-relative flex-shrink-0 text-normal" href="/acme/widgets/pull/42/checks"><span data-component="icon"><svg data-component="Octicon" aria-hidden="true" focusable="false" class="octicon octicon-checklist" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2 1h10v14H2z"></path></svg></span><span data-component="text" data-content="Checks">Checks</span><span data-component="counter"><span aria-hidden="true" data-variant="secondary" data-component="CounterLabel">5</span><span>&nbsp;(5)</span></span></a></li>
+          <li><a id="prs-files-anchor-tab" class="position-relative flex-shrink-0 text-normal" href="/acme/widgets/pull/42/changes"><span data-component="icon"><svg data-component="Octicon" aria-hidden="true" focusable="false" class="octicon octicon-file-diff" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1 0h12v16H1z"></path></svg></span><span data-component="text" data-content="Files changed">Files changed</span><span data-component="counter"><span aria-hidden="true" data-variant="secondary" data-component="CounterLabel">26</span><span>&nbsp;(26)</span></span></a></li>
+        </ul>
+        <div><div></div><button data-component="overflow-menu-button" type="button" aria-haspopup="true" aria-expanded="false"><span data-component="buttonContent"><span data-component="text"><span>More<span> items</span></span></span></span></button></div>
+      </nav>
+    </div>
+  </div>
+</div>
+<div data-testid="diff-comparison-viewer-sticky-header-slot">
+  <div aria-hidden="true"></div>
+  <div data-testid="diff-comparison-viewer-sticky-header-bar">
+    <div>
+      <button data-component="Button" type="button" aria-label="Switch tab (current: Overview)" data-testid="mini-header-tab-switcher-trigger" aria-haspopup="true" aria-expanded="false"><svg class="octicon octicon-tasklist" aria-hidden="true"></svg></button>
+      <div aria-hidden="true"></div>
+      <div>
+        <button type="button" aria-label="Pull request state: Open" aria-haspopup="true" aria-expanded="false"><span data-component="StateLabel" data-size="small" data-status="pullOpened">Open</span></button>
+        <span class="f5 fgColor-muted">#42</span><a href="#top" class="f5 text-bold fgColor-default"><span class="markdown-title" data-component="Text">Add widget support</span></a><button data-component="IconButton" type="button" data-size="small" data-variant="invisible" aria-labelledby="tip-copy-link"><svg class="octicon octicon-copy" aria-hidden="true"></svg></button><span data-direction="s" data-component="Tooltip" aria-hidden="true" id="tip-copy-link" popover="auto">Copy link</span>
+      </div>
+      <div>
+        <button data-component="Button" type="button" data-size="small" data-variant="primary"><span data-component="buttonContent"><span data-component="text"><span>Submit review</span><span>Review</span></span></span></button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,13 +1,22 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { clearPeoplePins, syncPeoplePins } from './dom';
+import { describe, expect, it, vi } from 'vitest';
 import type { PinnedPerson } from '../../shared/types';
+import {
+  clearPeoplePins,
+  findOption,
+  findPeoplePanels,
+  personFromButton,
+  PIN_BUTTON_ATTRIBUTE,
+  readPersonOptions,
+  setFilterQuery,
+  syncPinButtons,
+  syncPinnedSection,
+} from './dom';
 
-const fixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/people-pins.html'),
-  'utf8',
-);
+function fixture(name: 'reviewers-panel' | 'assignees-panel'): string {
+  return readFileSync(resolve(process.cwd(), `tests/fixtures/pr-people-pins/${name}.html`), 'utf8');
+}
 
 const ada: PinnedPerson = {
   id: '33',
@@ -21,194 +30,117 @@ const ben: PinnedPerson = {
   name: 'Ben Adey',
   avatarUrl: 'https://avatars.githubusercontent.com/u/22?s=40&v=4',
 };
-const cara: PinnedPerson = {
-  id: '11',
-  login: 'cara',
-  name: 'Cara Cole',
-  avatarUrl: 'https://avatars.githubusercontent.com/u/11?s=40&v=4',
-};
-const erin: PinnedPerson = {
-  id: '44',
-  login: 'erin',
-  name: 'Erin Ng',
-  avatarUrl: '',
-};
-const pins = [ben, ada, erin, cara];
 
-describe('people pin menu', () => {
-  it('shows one alphabetical pinned group and hides the original person row', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins(pins);
-    syncPeoplePins(pins);
+function panel() {
+  return findPeoplePanels(document)[0]!;
+}
 
-    const reviewers = document.getElementById('reviewers-select-menu')!;
-    expect(reviewers.querySelectorAll('[data-ght-pins]')).toHaveLength(1);
-    expect(reviewers.querySelector('[data-ght-pins]')?.parentElement?.hasAttribute('data-filterable-for')).toBe(true);
-    expect(pinnedLogins(reviewers)).toEqual(['ada', 'ben', 'cara', 'erin']);
-    expect(reviewers.querySelectorAll('input[value="11"]')).toHaveLength(1);
-    const caraInput = reviewers.querySelector<HTMLInputElement>('input[value="11"]')!;
-    expect(caraInput.closest('[data-ght-pinned-row]')).not.toBeNull();
-    expect(caraInput.checked).toBe(true);
-    expect(caraInput.disabled).toBe(false);
-    expect(caraInput.closest('[data-ght-pinned-row]')?.getAttribute('aria-checked')).toBe('true');
-    expect(pinnedInput('erin', reviewers)?.checked).toBe(true);
-    expect(pinnedInput('erin', reviewers)?.defaultChecked).toBe(true);
-    expect(pinnedInput('ada', reviewers)?.name).toBe('reviewer_user_ids[]');
-    const pinnedAvatar = reviewers.querySelector<HTMLImageElement>(
-      '[data-ght-pinned-row] img.js-avatar',
-    );
-    expect(pinnedAvatar?.closest('.select-menu-item-gravatar')).not.toBeNull();
-    expect(pinnedAvatar?.width).toBe(20);
-    expect(pinnedAvatar?.height).toBe(20);
-    expect(
-      reviewers.querySelector('[data-ght-person-id="33"] .select-menu-item-heading')
-        ?.textContent,
-    ).toBe('ada Ada Lovelace');
-
-    const assignees = document.getElementById('assignees-select-menu')!;
-    expect(pinnedLogins(assignees)).toEqual(['ada', 'ben', 'cara', 'erin']);
-    expect(assignees.querySelectorAll('input[value="33"]')).toHaveLength(1);
-    const adaRow = assignees.querySelector('input[value="33"]')!.closest('label')!;
-    expect(adaRow.hasAttribute('data-ght-pinned-row')).toBe(true);
-    expect(adaRow.hasAttribute('hidden')).toBe(false);
-    expect(pinnedInput('ada', assignees)?.name).toBe('issue[user_assignee_ids][]');
-    expect(pinnedInput('erin', assignees)?.checked).toBe(false);
-    expect(pinnedInput('erin', assignees)?.name).toBe('issue[user_assignee_ids][]');
-
-    const team = nativeLabel('acme/platform');
-    expect(team?.querySelector('[data-ght-pin-button]')).toBeNull();
+describe('findPeoplePanels', () => {
+  it.each(['reviewers-panel', 'assignees-panel'] as const)('finds the open %s by its filter box', (name) => {
+    document.body.innerHTML = fixture(name);
+    const panels = findPeoplePanels(document);
+    expect(panels).toHaveLength(1);
+    expect(panels[0]!.root.getAttribute('data-component')).toBe('SelectPanel');
+    expect(panels[0]!.header.contains(panels[0]!.input)).toBe(true);
   });
 
-  it('leaves rows in place when nothing changed so hover state survives', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins(pins);
-
-    const observer = new MutationObserver(() => {});
-    observer.observe(document.body, { childList: true, subtree: true });
-    syncPeoplePins(pins);
-    const records = observer.takeRecords();
-    observer.disconnect();
-
-    expect(records).toHaveLength(0);
-  });
-
-  it('adds a pin button on person rows and removes every tweak on cleanup', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins([]);
-
-    const benButton = document.querySelector('[aria-label="Pin ben"]');
-    expect(benButton).not.toBeNull();
-    expect(nativeLabel('acme/platform')?.querySelector('[data-ght-pin-button]')).toBeNull();
-    expect(document.querySelector('[data-ght-pins]')).toBeNull();
-
-    syncPeoplePins([cara]);
-    clearPeoplePins();
-
-    expect(document.querySelector('[data-ght-pins]')).toBeNull();
-    expect(document.querySelector('[data-ght-pin-button]')).toBeNull();
-    expect(nativeLabel('cara')?.hasAttribute('hidden')).toBe(false);
-  });
-
-  it('hides pinned rows that do not match the menu filter', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins(pins);
-    const filter = document.querySelector<HTMLInputElement>('#review-filter-field')!;
-    filter.value = 'cole';
-    syncPeoplePins(pins);
-
-    expect(pinnedLogins(document.getElementById('reviewers-select-menu')!)).toEqual(['cara']);
-    expect(pinnedLogins(document.getElementById('assignees-select-menu')!)).toEqual([
-      'ada',
-      'ben',
-      'cara',
-      'erin',
-    ]);
-
-    filter.value = 'zzz';
-    syncPeoplePins(pins);
-    expect(document.querySelector('#reviewers-select-menu [data-ght-pins]')).toBeNull();
-    expect(labelFor('cara')?.hasAttribute('hidden')).toBe(true);
-    expect(labelFor('ben')?.hasAttribute('hidden')).toBe(true);
-    expect(nativeLabel('acme/platform')?.hasAttribute('hidden')).toBe(false);
-  });
-
-  it('drops a pinned person from the form when their duplicate row stays checked', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins([cara]);
-    const reviewers = document.getElementById('reviewers-select-menu')!;
-    const filterable = reviewers.querySelector('[data-filterable-for]')!;
-    const duplicate = document.createElement('label');
-    duplicate.className = 'select-menu-item text-normal';
-    duplicate.innerHTML =
-      '<input type="checkbox" name="reviewer_user_ids[]" value="11" checked><span class="js-username">cara</span>';
-    filterable.append(duplicate);
-    syncPeoplePins([cara]);
-
-    const pinned = reviewers.querySelector<HTMLInputElement>('[data-ght-pinned-row] input')!;
-    const duplicateInput = duplicate.querySelector<HTMLInputElement>('input')!;
-    expect(duplicate.hidden).toBe(true);
-    expect(duplicateInput.disabled).toBe(true);
-    expect(pinned.disabled).toBe(false);
-    expect(pinned.checked).toBe(true);
-
-    pinned.closest('label')!.click();
-
-    expect(pinned.checked).toBe(false);
-    const form = pinned.form;
-    expect(form).not.toBeNull();
-    expect(new FormData(form!).getAll('reviewer_user_ids[]')).not.toContain('11');
-  });
-
-  it('toggles the real checkbox when a pinned person is clicked', () => {
-    document.body.innerHTML = fixture;
-    syncPeoplePins([cara]);
-    const reviewers = document.getElementById('reviewers-select-menu')!;
-    expect(reviewers.querySelectorAll('input[value="11"]')).toHaveLength(1);
-
-    const pinned = reviewers.querySelector<HTMLElement>('[data-ght-pinned-row]')!;
-    const input = pinned.querySelector<HTMLInputElement>('input')!;
-    expect(input.checked).toBe(true);
-    const changes: boolean[] = [];
-    input.addEventListener('change', () => {
-      changes.push(input.checked);
-    });
-
-    pinned.click();
-
-    expect(input.checked).toBe(false);
-    expect(changes).toEqual([false]);
-    expect(input.disabled).toBe(false);
+  it('ignores other pickers', () => {
+    document.body.innerHTML = fixture('reviewers-panel').replace('Filter reviewers', 'Filter labels');
+    expect(findPeoplePanels(document)).toEqual([]);
   });
 });
 
-function pinnedLogins(menu: ParentNode): string[] {
-  return Array.from(
-    menu.querySelectorAll('[data-ght-pinned-row]:not([hidden]) .js-username'),
-    (node) => node.textContent ?? '',
-  );
-}
+describe('readPersonOptions', () => {
+  it('reads reviewer options, with the name from the label, and skips apps', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    expect(readPersonOptions(panel()).map(({ person, selected }) => [person.id, person.login, person.name, selected])).toEqual([
+      ['11', 'cara', 'Cara Cole', false],
+      ['22', 'ben', 'Ben Adey', true],
+      ['55', 'dana', '', false],
+    ]);
+  });
 
-function labelFor(login: string): HTMLElement | null {
-  return (
-    Array.from(document.querySelectorAll<HTMLElement>('label.select-menu-item')).find(
-      (label) => label.querySelector('.js-username')?.textContent === login,
-    ) ?? null
-  );
-}
+  it('reads assignee options, with the name from the inline description', () => {
+    document.body.innerHTML = fixture('assignees-panel');
+    expect(readPersonOptions(panel()).map(({ person, selected }) => [person.id, person.login, person.name, selected])).toEqual([
+      ['22', 'ben', '', true],
+      ['33', 'ada', 'Ada Lovelace', false],
+    ]);
+    expect(findOption(panel(), 'ADA')?.id).toBe('asg-ada');
+    expect(findOption(panel(), 'erin')).toBeNull();
+  });
+});
 
-function nativeLabel(login: string): HTMLElement | null {
-  return (
-    Array.from(document.querySelectorAll<HTMLElement>('label.select-menu-item')).find(
-      (label) =>
-        !label.hasAttribute('data-ght-pinned-row') &&
-        label.querySelector('.js-username')?.textContent === login,
-    ) ?? null
-  );
-}
+describe('syncPinButtons', () => {
+  it('adds one pin toggle to each person option, idempotently', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    syncPinButtons(readPersonOptions(panel()), [ben]);
+    syncPinButtons(readPersonOptions(panel()), [ben]);
 
-function pinnedInput(login: string, menu: ParentNode): HTMLInputElement | null {
-  const row = Array.from(menu.querySelectorAll<HTMLElement>('[data-ght-pinned-row]')).find(
-    (label) => label.querySelector('.js-username')?.textContent === login,
-  );
-  return row?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
-}
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>(`[${PIN_BUTTON_ATTRIBUTE}]`)];
+    expect(buttons.map((button) => [button.parentElement!.id, button.getAttribute('aria-label'), button.getAttribute('aria-pressed')])).toEqual([
+      ['rev-cara', 'Pin cara', 'false'],
+      ['rev-ben', 'Unpin ben', 'true'],
+      ['rev-dana', 'Pin dana', 'false'],
+    ]);
+    expect(personFromButton(buttons[1]!)).toEqual({
+      id: '22',
+      login: 'ben',
+      name: 'Ben Adey',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/22?s=40&v=4',
+    });
+  });
+});
+
+describe('syncPinnedSection', () => {
+  it('lists pinned people right after the filter box, with their selected state', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    syncPinnedSection(panel(), [
+      { person: ada, selected: false },
+      { person: ben, selected: true },
+    ]);
+
+    const section = panel().header.nextElementSibling!;
+    expect(section.getAttribute('aria-label')).toBe('Pinned');
+    const rows = [...section.querySelectorAll('.ght-pp__select')];
+    expect(rows.map((row) => [row.querySelector('.ght-pp__login')?.textContent, row.getAttribute('aria-pressed')])).toEqual([
+      ['ada', 'false'],
+      ['ben', 'true'],
+    ]);
+    expect(personFromButton(rows[0] as HTMLElement)?.login).toBe('ada');
+    expect(section.querySelectorAll(`[${PIN_BUTTON_ATTRIBUTE}][aria-pressed="true"]`)).toHaveLength(2);
+  });
+
+  it('keeps the same rows when nothing changed, and removes the section when empty', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    syncPinnedSection(panel(), [{ person: ada, selected: false }]);
+    const row = document.querySelector('.ght-pp__row');
+    syncPinnedSection(panel(), [{ person: ada, selected: false }]);
+    expect(document.querySelector('.ght-pp__row')).toBe(row);
+
+    syncPinnedSection(panel(), [{ person: ada, selected: true }]);
+    expect(document.querySelector('.ght-pp__row')).not.toBe(row);
+
+    syncPinnedSection(panel(), []);
+    expect(document.querySelector('[data-ght-pp-pinned]')).toBeNull();
+  });
+
+  it('cleans up everything it added', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    syncPinButtons(readPersonOptions(panel()), [ada]);
+    syncPinnedSection(panel(), [{ person: ada, selected: false }]);
+    clearPeoplePins();
+    expect(document.querySelectorAll('[data-ght-pp-pinned], [data-ght-pp-pin]')).toHaveLength(0);
+  });
+});
+
+describe('setFilterQuery', () => {
+  it('sets the filter box and tells GitHub it changed', () => {
+    document.body.innerHTML = fixture('reviewers-panel');
+    const onInput = vi.fn();
+    panel().input.addEventListener('input', onInput);
+    setFilterQuery(panel().input, 'ada');
+    expect(panel().input.value).toBe('ada');
+    expect(onInput).toHaveBeenCalledTimes(1);
+  });
+});

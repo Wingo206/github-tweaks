@@ -12,10 +12,16 @@ import {
   syncConversationThreads,
   syncDiffLineButtons,
   syncFileHeaders,
+  syncOverviewThreads,
 } from './dom';
 
 function fixture(name: string): string {
   return readFileSync(resolve(process.cwd(), 'tests/fixtures/open-in-cursor', name), 'utf8');
+}
+
+// TODO(classic-4)
+function classicFixture(name: string): string {
+  return readFileSync(resolve(process.cwd(), 'tests/fixtures/classic/open-in-cursor', name), 'utf8');
 }
 
 const ref = { owner: 'acme', repository: 'widgets', number: 42 };
@@ -176,9 +182,40 @@ describe('changes tab review thread', () => {
   });
 });
 
-describe('conversation tab review threads', () => {
+describe('Overview review threads', () => {
+  it('mounts after the jump-to-diff link of each thread, idempotently', () => {
+    document.body.innerHTML = fixture('overview-review-threads.html');
+    const open = opener();
+    syncOverviewThreads(document, ref, open);
+    syncOverviewThreads(document, ref, open);
+
+    const buttons = controls('overview-thread');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]!.previousElementSibling?.textContent).toBe('Jump to the comment in the diff');
+    expect(buttons[0]!.closest('h2')).toBeNull();
+
+    buttons[0]!.click();
+    buttons[1]!.click();
+    expect(open.mock.calls.map(([target]) => target)).toEqual([
+      { kind: 'pr-comment', ...ref, commentId: '4001', fallback: { path: 'src/widgets/panel.ts', line: 12 } },
+      { kind: 'pr-comment', ...ref, commentId: '5001', fallback: { path: 'src/widgets/list.ts', line: 30 } },
+    ]);
+  });
+
+  it('does not open the thread when clicked', () => {
+    document.body.innerHTML = fixture('overview-review-threads.html');
+    syncOverviewThreads(document, ref, opener());
+    const toggle = vi.fn();
+    document.querySelector('article')!.addEventListener('click', toggle);
+    controls('overview-thread')[0]!.click();
+    expect(toggle).not.toHaveBeenCalled();
+  });
+});
+
+// TODO(classic-4): review threads on the classic Conversation tab.
+describe('classic Conversation tab review threads', () => {
   it('mounts after the path link for expanded and collapsed threads', () => {
-    document.body.innerHTML = fixture('conversation-review-threads.html');
+    document.body.innerHTML = classicFixture('conversation-review-threads.html');
     const open = opener();
     syncConversationThreads(document, ref, open);
     syncConversationThreads(document, ref, open);
@@ -196,7 +233,7 @@ describe('conversation tab review threads', () => {
   });
 
   it('does not toggle the thread when clicked', () => {
-    document.body.innerHTML = fixture('conversation-review-threads.html');
+    document.body.innerHTML = classicFixture('conversation-review-threads.html');
     syncConversationThreads(document, ref, opener());
     const toggle = vi.fn();
     document.querySelector('review-thread-collapsible')!.addEventListener('click', toggle);

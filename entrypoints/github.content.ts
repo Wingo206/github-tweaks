@@ -11,7 +11,9 @@ import { PrAutoCollapseViewedFeature } from '../src/features/pr-auto-collapse-vi
 import { PrCheckoutBranchFeature } from '../src/features/pr-checkout-branch';
 import { PrFileTreeViewportFeature } from '../src/features/pr-file-tree-viewport';
 import { PrHandbackAssigneeFeature } from '../src/features/pr-handback-assignee';
+import { LayoutFeatures } from '../src/features/layouts';
 import { PrPeoplePinsFeature } from '../src/features/pr-people-pins';
+import { PrPeoplePinsClassicFeature } from '../src/features/pr-people-pins-classic';
 import { PrSidebarMetadataFeature } from '../src/features/pr-sidebar-metadata';
 import { PrStickyTabsFeature } from '../src/features/pr-sticky-tabs';
 import { PrTabFaviconFeature } from '../src/features/pr-tab-favicon';
@@ -35,7 +37,11 @@ export default defineContentScript({
       'pr-auto-collapse-viewed': new PrAutoCollapseViewedFeature(sidebarFeature),
       'mermaid-fullscreen': new MermaidFullscreenFeature(),
       'pr-handback-assignee': new PrHandbackAssigneeFeature(),
-      'pr-people-pins': new PrPeoplePinsFeature(),
+      'pr-people-pins': new LayoutFeatures('pr-people-pins', [
+        new PrPeoplePinsFeature(),
+        // TODO(classic-3): the classic Reviewers and Assignees menus.
+        new PrPeoplePinsClassicFeature(),
+      ]),
       'open-in-cursor': new OpenInCursorFeature(),
       'pr-checkout-branch': new PrCheckoutBranchFeature(),
       'pr-tab-favicon': new PrTabFaviconFeature(),

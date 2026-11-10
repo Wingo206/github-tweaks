@@ -249,6 +249,38 @@ Before releasing a change:
 - check light and dark GitHub themes
 - remove the PAT and confirm the compact setup/retry banner
 
+## Classic layout support
+
+GitHub is rolling out a new pull request layout (its "Overview preview"),
+and the classic Conversation layout is still a click away ("View
+Conversation page"). Code that only exists for the classic layout is tagged
+with a numbered `TODO(classic-N)` comment, and its fixtures live under
+`tests/fixtures/classic/`. Each number is one piece to delete together:
+code, tests, styles, and fixtures. List them with:
+
+```sh
+rg 'TODO\(classic-'
+```
+
+Prefer one adapter per layout over optional chains through shared code. The
+two layouts never share a page, so each adapter's selectors simply find
+nothing on the other layout. A feature that needs a redesign for the new
+layout gets a separate implementation, and the classic one stays in its own
+folder under the same popup toggle.
+
+1. **Sticky header tabs:** the classic sticky header and stuck Files changed
+   toolbar mounts, classic tab labels, and the scoped `:has()` rule.
+2. **Hand back assignee:** `classicDom.ts` (the Assignees HTML partial and
+   its refresh) and its entry in the controller's adapter list.
+3. **Pinned people:** the whole `src/features/pr-people-pins-classic/`
+   folder, its entry in `entrypoints/github.content.ts`, and
+   `tests/e2e/people-pins-classic.spec.ts`. Once it is the only layout left,
+   `pr-people-pins` can be registered on its own instead of through
+   `LayoutFeatures`.
+4. **Open in Cursor:** `syncConversationThreads` and `conversationCommentId`
+   (the classic Conversation tab's `review-thread-collapsible` threads), their
+   call in the controller, and their tests.
+
 ## Maintaining GitHub DOM fixtures
 
 When GitHub changes the UI:

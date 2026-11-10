@@ -8,6 +8,7 @@ import {
   syncConversationThreads,
   syncDiffLineButtons,
   syncFileHeaders,
+  syncOverviewThreads,
   type Opener,
 } from './dom';
 import type { OpenInCursorRoute } from './model';
@@ -47,6 +48,8 @@ export class OpenInCursorController {
       syncFileHeaders(document, route.ref, this.open);
       syncDiffLineButtons(document, route.ref, this.open);
       syncChangesThreads(document, route.ref, this.open);
+      syncOverviewThreads(document, route.ref, this.open);
+      // TODO(classic-4): the classic Conversation tab.
       syncConversationThreads(document, route.ref, this.open);
     } else {
       syncBlobToolbar(document, this.open);

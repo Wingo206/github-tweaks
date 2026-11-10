@@ -1,10 +1,5 @@
 import type { PinnedPerson, PullRequestRef } from '../../shared/types';
 
-const USER_CHECKBOX_NAMES = new Set([
-  'reviewer_user_ids[]',
-  'issue[user_assignee_ids][]',
-]);
-
 export function parsePullRequestUrl(url: URL): PullRequestRef | null {
   const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/);
   if (!match) {
@@ -23,8 +18,29 @@ export function parsePullRequestUrl(url: URL): PullRequestRef | null {
   };
 }
 
-export function isUserCheckboxName(name: string): boolean {
-  return USER_CHECKBOX_NAMES.has(name);
+/**
+ * The numeric user id in a GitHub avatar URL (`/u/<id>`). Apps and bots use
+ * other paths, so a missing id also means "not a person".
+ */
+export function userIdFromAvatar(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.pathname.match(/^\/u\/(\d+)$/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function loginKey(login: string): string {
+  return login.trim().toLowerCase();
+}
+
+export function isPinned(pins: readonly PinnedPerson[], login: string): boolean {
+  const key = loginKey(login);
+  return pins.some((pin) => loginKey(pin.login) === key);
 }
 
 export function sortPins(pins: readonly PinnedPerson[]): PinnedPerson[] {
@@ -52,13 +68,14 @@ export function visiblePins(
   return sortPins(pins.filter((person) => pinMatchesQuery(person, query)));
 }
 
+/** Pins or unpins a person by login, keeping the list alphabetical. */
 export function togglePin(
   pins: readonly PinnedPerson[],
   person: PinnedPerson,
 ): PinnedPerson[] {
-  const exists = pins.some((pin) => pin.id === person.id);
-  const next = exists
-    ? pins.filter((pin) => pin.id !== person.id)
+  const key = loginKey(person.login);
+  const next = isPinned(pins, person.login)
+    ? pins.filter((pin) => loginKey(pin.login) !== key)
     : [...pins, person];
   return sortPins(next);
 }

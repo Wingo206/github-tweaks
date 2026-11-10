@@ -61,19 +61,23 @@ failure is also printed in the page console and appended to
 ### Hand back PR assignee
 
 On pull request pages, when you are assigned and are not the author, GitHub
-Tweaks adds a **reassign author** action beside Assignees (same style as
-Refined GitHub’s “review now” / “approve now”). One click removes you as an
-assignee (leaving other assignees alone), assigns the author if needed, then
-refreshes GitHub's Assignees partial so the list shows GitHub's values.
+Tweaks adds a **reassign author** action beside the Assignees heading (same
+style as Refined GitHub’s “review now” / “approve now”). One click removes you
+as an assignee (leaving other assignees alone) and assigns the author if
+needed. GitHub's sidebar normally picks the change up on its own; if it
+hasn't, the action turns into "reassigned, reload to update". In the classic
+layout, the list refreshes from GitHub right away.
 
 ### Pinned people
 
-On pull request pages, each person in the Reviewers and Assignees menus has a
-pin. Pins are stored per repository in extension storage and listed
-alphabetically under **Pinned** at the top of both menus, including people who
-are not in that menu yet. The row still selects them through GitHub's own
-control. The menu's search box filters the pinned rows along with the rest of
-the list. Pins are for people.
+On pull request pages, each person in the Reviewers and Assignees pickers has
+a pin. Pins are stored per repository in extension storage and listed
+alphabetically under **Pinned**, between the picker's search box and GitHub's
+list, including people the picker isn't listing yet. Picking a pinned person
+clicks GitHub's own option for them; if the picker isn't listing them, it
+searches for them in the search box first, then clears the search again. The
+search box also filters the pinned rows. Pins are for people, not apps, bots,
+or teams, and the same pins show in the classic layout's menus.
 
 ### Open in Cursor
 
@@ -82,7 +86,8 @@ inside the matching clone, and brings that window to the front. Buttons appear:
 
 - beside the blue **+** (add comment) button when you hover a diff line, and in
   each file header (before **Viewed**), on the Files changed tab
-- in each review thread heading on the Files changed and Conversation tabs
+- in each review thread heading on the Files changed and Overview tabs
+  (including the comments panel), after **Jump to the comment in the diff**
 - in a file page's toolbar (after Raw / Copy / Download) and its highlighted
   line menu
 
@@ -104,7 +109,8 @@ the toolbar popup. The current version supports WSL Cursor windows on Windows.
 ### Check out PR branch locally
 
 On pull request pages, a button beside **Copy head branch name** checks out
-the head branch in one of your open Cursor windows. When a clone already has
+the head branch in one of your open Cursor windows. It is also in the sticky
+header, after the pull request title. When a clone already has
 the branch, the button shows its name (for example, a check and `bagel`).
 Otherwise its menu lists every clone of the repository open in Cursor, with
 its current branch:
@@ -132,7 +138,7 @@ PR are easy to tell apart in the tab strip. The favicon stays GitHub's
 Octocat, with a colored page icon in the corner where GitHub normally shows CI
 status:
 
-- **Conversation** — blue speech bubbles
+- **Overview** (Conversation in the classic layout) — blue speech bubbles
 - **Commits** (including a single commit's diff) — purple commit dot
 - **Checks** — orange checklist
 - **Files changed** (`/files` and `/changes`) — green file diff
@@ -144,21 +150,23 @@ the normal favicon.
 
 ### Tabs in the sticky header
 
-Once you scroll down a pull request, the header that sticks to the top of the
-page gets a compact copy of the **Conversation**, **Commits**, **Checks**, and
-**Files changed** tabs, right after the head branch name (and the check-out
-button). Counts and the current tab follow GitHub's own tab bar.
+GitHub's sticky bar at the top of every pull request tab gets, right after
+the title (and the check-out button):
 
-- A click goes through GitHub's own tab link, so it navigates the same way.
-  Cmd/Ctrl-click and middle-click open the tab in a new browser tab.
-- Clicking the tab you are already on scrolls back to the top.
-- After the tabs, the pull request's `+additions -deletions` totals, copied
-  from the ones GitHub shows beside its tab bar. Files changed leaves them
-  out, since its toolbar already has the changes meter.
+- a compact copy of the **Overview**, **Commits**, **Checks**, and **Files
+  changed** tabs. Counts and the current tab follow GitHub's own tab bar.
+- the pull request's `+additions -deletions` totals, copied from the main
+  header. Files changed leaves them out, since its toolbar already has the
+  changes meter.
 
-On Files changed, GitHub only shows the branch summary while its toolbar is
-stuck and the window is wide enough, and the tabs appear and hide with it.
-GitHub's Checks page has no sticky header, so it gets no tabs.
+A tab click goes through GitHub's own tab link, so it navigates the same way.
+Cmd/Ctrl-click and middle-click open the tab in a new browser tab. Clicking
+the tab you are already on scrolls back to the top. In narrower windows the
+tabs drop their names and keep their icons and counts, and on very narrow
+windows they hide, so GitHub's own actions keep their room.
+
+In the classic layout, the tabs go after the head branch name in the sticky
+header instead, where GitHub shows its own copy button.
 
 ### Pull request tab groups
 
@@ -166,7 +174,7 @@ Keeps the pages of one pull request in the Chrome tab group you already made
 for it. GitHub Tweaks never creates, renames, or removes tab groups, and never
 moves a tab that is already in a group.
 
-- **Automatically:** when you open any page of a pull request (Conversation,
+- **Automatically:** when you open any page of a pull request (Overview,
   Commits, Checks, or Files changed) in an ungrouped tab, and another tab of
   that pull request is already in a group in the same window, the new tab
   joins that group, next to the pull request's other tabs. A toast on the page

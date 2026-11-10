@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, expect, test } from '@playwright/test';
 
-test('shows repository pins and saves a new pin', async () => {
+test('shows repository pins in the reviewers picker and saves a new pin', async () => {
   const extensionPath = resolve(process.cwd(), '.output/chrome-mv3');
-  const sidebar = readFileSync(
-    resolve(process.cwd(), 'tests/fixtures/people-pins.html'),
+  const panel = readFileSync(
+    resolve(process.cwd(), 'tests/fixtures/pr-people-pins/reviewers-panel.html'),
     'utf8',
   );
   const context = await chromium.launchPersistentContext('', {
@@ -20,7 +20,7 @@ test('shows repository pins and saves a new pin', async () => {
   await context.route('https://github.com/acme/widgets/pull/42', async (route) => {
     await route.fulfill({
       contentType: 'text/html',
-      body: `<!doctype html><html><body>${sidebar}</body></html>`,
+      body: `<!doctype html><html><body>${panel}</body></html>`,
     });
   });
   await context.route('https://api.github.com/**', async (route) => {
@@ -49,12 +49,10 @@ test('shows repository pins and saves a new pin', async () => {
 
     const page = await context.newPage();
     await page.goto('https://github.com/acme/widgets/pull/42');
-    const reviewers = page.locator('#reviewers-select-menu');
-    await expect(reviewers.locator('[data-ght-pinned-row] .js-username')).toHaveText(
-      'ada',
-    );
+    const pinned = page.getByRole('group', { name: 'Pinned' });
+    await expect(pinned.locator('.ght-pp__login')).toHaveText('ada');
 
-    await reviewers.getByRole('button', { name: 'Pin ben' }).click();
+    await page.locator('#rev-dana').getByRole('button', { name: 'Pin dana' }).click();
     await expect
       .poll(() =>
         worker.evaluate(async () => {
@@ -63,11 +61,9 @@ test('shows repository pins and saves a new pin', async () => {
           return people.map((person) => person.login);
         }),
       )
-      .toEqual(['ada', 'ben']);
-    await expect(reviewers.locator('[data-ght-pinned-row] .js-username')).toHaveText([
-      'ada',
-      'ben',
-    ]);
+      .toEqual(['ada', 'dana']);
+    await expect(pinned.locator('.ght-pp__login')).toHaveText(['ada', 'dana']);
+    await expect(page.locator('#rev-dana')).toHaveAttribute('aria-selected', 'false');
   } finally {
     await context.close();
   }

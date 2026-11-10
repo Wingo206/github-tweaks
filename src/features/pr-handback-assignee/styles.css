@@ -8,3 +8,43 @@
   font-size: 12px;
   margin: 0.25rem 0 0.5rem;
 }
+
+/*
+ * Overview sidebar: GitHub's whole Assignees heading row is one button, so
+ * the action sits over the row, anchored right after the "Assignees" text.
+ */
+section[aria-label="Assignees"][data-overview-sidebar-item] > h4 {
+  position: relative;
+}
+
+section[aria-label="Assignees"][data-overview-sidebar-item] > h4 > button > :first-child {
+  anchor-name: --ght-handback-title;
+}
+
+h4 > [data-ght-handback="action"] {
+  color: var(--fgColor-muted, #59636e);
+  font-size: 12px;
+  font-weight: 400;
+  left: anchor(right);
+  margin-left: 6px;
+  position: absolute;
+  position-anchor: --ght-handback-title;
+  top: anchor(center);
+  translate: 0 -50%;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+[data-ght-handback="action"] .ght-handback__button {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+[data-ght-handback="action"] .ght-handback__button:hover:not(:disabled) {
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: underline;
+}

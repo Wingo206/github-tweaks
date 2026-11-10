@@ -56,21 +56,21 @@ describe('OpenInCursorController', () => {
   });
 
   it('re-mounts controls that GitHub re-renders away', async () => {
-    document.body.innerHTML = fixture('conversation-review-threads.html');
+    document.body.innerHTML = fixture('overview-review-threads.html');
     controller = new OpenInCursorController({ kind: 'pull', ref }, vi.fn());
     controller.start();
-    expect(document.querySelectorAll(`[${MARKER}="conversation-thread"]`)).toHaveLength(2);
+    expect(document.querySelectorAll(`[${MARKER}="overview-thread"]`)).toHaveLength(2);
 
-    document.body.innerHTML = fixture('conversation-review-threads.html');
+    document.body.innerHTML = fixture('overview-review-threads.html');
     await nextFrame();
-    expect(document.querySelectorAll(`[${MARKER}="conversation-thread"]`)).toHaveLength(2);
+    expect(document.querySelectorAll(`[${MARKER}="overview-thread"]`)).toHaveLength(2);
   });
 
   it('only mounts blob controls on blob routes', () => {
-    document.body.innerHTML = fixture('blob-header.html') + fixture('conversation-review-threads.html');
+    document.body.innerHTML = fixture('blob-header.html') + fixture('overview-review-threads.html');
     controller = new OpenInCursorController({ kind: 'blob', owner: 'acme', repository: 'widgets' }, vi.fn());
     controller.start();
     expect(document.querySelectorAll(`[${MARKER}="blob-toolbar"]`)).toHaveLength(1);
-    expect(document.querySelectorAll(`[${MARKER}="conversation-thread"]`)).toHaveLength(0);
+    expect(document.querySelectorAll(`[${MARKER}="overview-thread"]`)).toHaveLength(0);
   });
 });

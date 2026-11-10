@@ -39,10 +39,7 @@ export class PrPeoplePinsFeature implements Feature {
   }
 }
 
-function sameRef(
-  left: PullRequestRef,
-  right: PullRequestRef | undefined,
-): boolean {
+function sameRef(left: PullRequestRef, right: PullRequestRef | undefined): boolean {
   return (
     !!right &&
     left.owner === right.owner &&

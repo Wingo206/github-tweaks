@@ -73,14 +73,14 @@ export const FEATURES: readonly FeatureDefinition[] = [
   {
     id: 'pr-tab-favicon',
     title: 'Pull request tab icons',
-    description: 'Per-tab favicon for Conversation, Commits, Checks, and Files changed.',
+    description: 'Per-tab favicon for Overview, Commits, Checks, and Files changed.',
     defaultEnabled: true,
   },
   {
     id: 'pr-sticky-tabs',
     title: 'Tabs in the sticky header',
     description:
-      'Conversation, Commits, Checks, and Files changed, plus line totals, beside the branch name once you scroll.',
+      'Overview, Commits, Checks, and Files changed tabs, plus line totals, in the sticky header.',
     defaultEnabled: true,
   },
   {

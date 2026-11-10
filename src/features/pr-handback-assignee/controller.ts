@@ -1,12 +1,28 @@
 import { sendBackgroundMessage } from '../../shared/messaging';
 import type { HandbackContext, PullRequestRef } from '../../shared/types';
+import { classicAssignees } from './classicDom';
 import {
   clearHandbackUi,
-  findAssigneesRoot,
-  refreshAssigneesPartial,
-  syncHandbackUi,
+  overviewAssignees,
+  type AssigneesAdapter,
   type HandbackUiState,
 } from './dom';
+
+const ADAPTERS: readonly AssigneesAdapter[] = [
+  overviewAssignees,
+  // TODO(classic-2): the classic Conversation sidebar.
+  classicAssignees,
+];
+
+function findAssignees(): { adapter: AssigneesAdapter; root: HTMLElement } | null {
+  for (const adapter of ADAPTERS) {
+    const root = adapter.findRoot(document);
+    if (root) {
+      return { adapter, root };
+    }
+  }
+  return null;
+}
 
 export class HandbackController {
   private observer: MutationObserver | null = null;
@@ -83,9 +99,9 @@ export class HandbackController {
     }
 
     this.observer?.disconnect();
-    const root = findAssigneesRoot();
-    if (root && this.context) {
-      const result = syncHandbackUi(root, {
+    const found = findAssignees();
+    if (found && this.context) {
+      const result = found.adapter.sync(found.root, {
         viewerLogin: this.context.viewerLogin,
         authorLogin: this.context.authorLogin,
         uiState: this.uiState,
@@ -94,6 +110,9 @@ export class HandbackController {
           void this.handback();
         },
       });
+      if (!result.visible && this.uiState === 'done') {
+        this.uiState = 'idle';
+      }
       const key = JSON.stringify({
         ...result,
         uiState: this.uiState,
@@ -105,11 +124,11 @@ export class HandbackController {
         console.info('[ght-handback] sync', result);
       }
     } else {
-      const key = `skip:${!!root}:${!!this.context}`;
+      const key = `skip:${!!found}:${!!this.context}`;
       if (key !== this.lastSyncKey) {
         this.lastSyncKey = key;
         console.info('[ght-handback] sync skipped', {
-          hasRoot: !!root,
+          hasRoot: !!found,
           hasContext: !!this.context,
         });
       }
@@ -137,16 +156,16 @@ export class HandbackController {
         return;
       }
 
-      const root = findAssigneesRoot();
-      if (root) {
-        await refreshAssigneesPartial(root);
+      const found = findAssignees();
+      if (found) {
+        await found.adapter.refresh(found.root);
       }
 
       if (this.stopped) {
         return;
       }
 
-      this.uiState = 'idle';
+      this.uiState = 'done';
       this.errorMessage = null;
       this.sync();
     } catch (error) {

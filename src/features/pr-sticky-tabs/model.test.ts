@@ -11,7 +11,7 @@ import {
 
 const tab: StickyTab = {
   href: '/acme/widgets/pull/42',
-  label: 'Conversation',
+  label: 'Overview',
   count: '8',
   current: true,
   icon: 'octicon-comment-discussion',
@@ -79,7 +79,7 @@ describe('lineCountsLabel', () => {
 
 describe('accessibleName', () => {
   it('includes the count when there is one', () => {
-    expect(accessibleName(tab)).toBe('Conversation (8)');
+    expect(accessibleName(tab)).toBe('Overview (8)');
     expect(accessibleName({ label: 'Checks', count: null })).toBe('Checks');
   });
 });

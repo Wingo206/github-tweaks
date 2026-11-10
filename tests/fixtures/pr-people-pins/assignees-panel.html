@@ -1,0 +1,31 @@
+<div id="__primerPortalRoot__">
+  <div data-component="Portal">
+    <div role="dialog" data-component="AnchoredOverlay" aria-labelledby="asg-title" data-focus-trap="active">
+      <div data-variant="anchored" data-component="SelectPanel">
+        <div data-component="SelectPanel.Header"><div><h1 data-component="SelectPanel.Title" id="asg-title">Assign up to 10 people to this pull request</h1></div></div>
+        <div data-testid="filtered-action-list" data-component="FilteredActionList">
+          <div data-component="FilteredActionList.Header">
+            <span class="TextInput-wrapper" data-component="TextInput"><input placeholder="Filter assignees" role="combobox" aria-expanded="true" aria-controls="asg-list" aria-label="Filter assignees" data-component="input" type="text" value=""></span>
+          </div>
+          <span id="asg-hint">Items will be filtered as you type</span>
+          <div>
+            <ul role="listbox" data-component="ActionList" aria-label="User results" data-testid="item-picker-root" aria-multiselectable="true" id="asg-list">
+              <li data-component="ActionList.Group" role="none">
+                <div role="presentation" aria-hidden="true" data-component="GroupHeadingWrap"><span>Group assignees</span></div>
+                <ul aria-label="Group assignees" role="group">
+                  <li tabindex="-1" aria-selected="true" role="option" id="asg-ben" data-id="MDQ6VXNlcjIy" data-dd-action-name="pull_requests.assignees.remove" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="20" height="20" data-testid="github-avatar" src="https://avatars.githubusercontent.com/u/22?s=60&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><span data-component="ActionList.Item.Label">ben</span><span data-component="ActionList.TrailingVisual"></span></span></div></li>
+                </ul>
+              </li>
+              <li data-component="ActionList.Group" role="none">
+                <div role="presentation" aria-hidden="true" data-component="GroupHeadingWrap"><span>Suggestions</span></div>
+                <ul aria-label="Suggestions" role="group">
+                  <li tabindex="-1" aria-selected="false" role="option" id="asg-ada" data-id="MDQ6VXNlcjMz" data-dd-action-name="pull_requests.assignees.add" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="20" height="20" data-testid="github-avatar" src="https://avatars.githubusercontent.com/u/33?s=64&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><div data-description-variant="inline"><span data-component="ActionList.Item.Label">ada</span><span data-component="ActionList.Description">Ada Lovelace</span></div><span data-component="ActionList.TrailingVisual"></span></span></div></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,85 +1,143 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
-import { PeoplePinsController } from './controller';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BackgroundRequest, PinnedPerson } from '../../shared/types';
+import { PeoplePinsController } from './controller';
 
-const fixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/people-pins.html'),
+const reviewersPanel = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/pr-people-pins/reviewers-panel.html'),
   'utf8',
 );
 
-const ref = { owner: 'Acme', repository: 'Widgets', number: 42 };
+const ref = { owner: 'acme', repository: 'widgets', number: 42 };
 const ada: PinnedPerson = {
   id: '33',
   login: 'ada',
   name: 'Ada Lovelace',
   avatarUrl: 'https://avatars.githubusercontent.com/u/33?s=40&v=4',
 };
+const cara: PinnedPerson = {
+  id: '11',
+  login: 'cara',
+  name: 'Cara Cole',
+  avatarUrl: 'https://avatars.githubusercontent.com/u/11?s=40&v=4',
+};
 
-describe('people pins controller', () => {
-  it('loads repository pins and saves a newly pinned person', async () => {
-    document.body.innerHTML = fixture;
-    let people = [ada];
-    vi.mocked(browser.runtime.sendMessage).mockImplementation(async (request: unknown) => {
-      const typed = request as BackgroundRequest;
-      if (typed.type === 'pins:get') {
-        return { ok: true, data: people };
-      }
-      if (typed.type === 'pins:save') {
-        people = typed.people;
-        return { ok: true, data: people };
-      }
-      return { ok: true };
-    });
+let controller: PeoplePinsController | null = null;
+let stored: PinnedPerson[] = [];
 
-    const controller = new PeoplePinsController(ref);
-    await controller.start();
-
-    expect(pinnedLogins(document.getElementById('reviewers-select-menu')!)).toEqual(['ada']);
-    document.querySelector<HTMLButtonElement>('[aria-label="Pin ben"]')!.click();
-    await settle();
-
-    expect(people.map((person) => person.login)).toEqual(['ada', 'ben']);
-    expect(pinnedLogins(document.getElementById('reviewers-select-menu')!)).toEqual([
-      'ada',
-      'ben',
-    ]);
-    const benInputs = document.querySelectorAll('#reviewers-select-menu input[value="22"]');
-    expect(benInputs).toHaveLength(1);
-    expect((benInputs[0] as HTMLInputElement).checked).toBe(false);
-
-    const filter = document.querySelector<HTMLInputElement>('#review-filter-field')!;
-    filter.value = 'zzz';
-    filter.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(document.querySelector('#reviewers-select-menu [data-ght-pins]')).toBeNull();
-
-    controller.stop();
-    expect(document.querySelector('[data-ght-pin-button]')).toBeNull();
-  });
-
-  it('still offers pin buttons when stored pins cannot be loaded', async () => {
-    document.body.innerHTML = fixture;
-    vi.mocked(browser.runtime.sendMessage).mockImplementation(async () => ({
-      ok: false,
-      error: 'offline',
-    }));
-
-    const controller = new PeoplePinsController(ref);
-    await controller.start();
-    expect(document.querySelector('[aria-label="Pin ben"]')).not.toBeNull();
-    controller.stop();
-  });
+afterEach(() => {
+  controller?.stop();
+  controller = null;
+  vi.useRealTimers();
 });
 
-function pinnedLogins(menu: ParentNode): string[] {
-  return Array.from(
-    menu.querySelectorAll('[data-ght-pinned-row] .js-username'),
-    (node) => node.textContent ?? '',
-  );
+async function start(pins: PinnedPerson[]): Promise<void> {
+  stored = pins;
+  vi.mocked(browser.runtime.sendMessage).mockImplementation(async (request: unknown) => {
+    const typed = request as BackgroundRequest;
+    if (typed.type === 'pins:get') {
+      return { ok: true, data: stored };
+    }
+    if (typed.type === 'pins:save') {
+      stored = typed.people;
+      return { ok: true, data: stored };
+    }
+    return { ok: false, error: 'unexpected' };
+  });
+  document.body.innerHTML = reviewersPanel;
+  controller = new PeoplePinsController(ref);
+  await controller.start();
+}
+
+function pinnedRow(login: string): HTMLElement {
+  return [...document.querySelectorAll<HTMLElement>('.ght-pp__select')].find(
+    (row) => row.querySelector('.ght-pp__login')?.textContent === login,
+  )!;
+}
+
+function pinnedLogins(): string[] {
+  return [...document.querySelectorAll('.ght-pp__login')].map((node) => node.textContent ?? '');
+}
+
+function input(): HTMLInputElement {
+  return document.querySelector<HTMLInputElement>('input[aria-label="Filter reviewers"]')!;
 }
 
 async function settle(): Promise<void> {
-  await new Promise((resolve) => window.setTimeout(resolve, 10));
-  await Promise.resolve();
+  await new Promise((done) => setTimeout(done, 10));
+  await new Promise((done) => window.requestAnimationFrame(() => done(undefined)));
 }
+
+describe('people pins controller', () => {
+  it('shows stored pins in the open picker', async () => {
+    await start([cara, ada]);
+    expect(pinnedLogins()).toEqual(['ada', 'cara']);
+    expect(document.querySelector('#rev-cara [aria-label="Unpin cara"]')).not.toBeNull();
+    expect(document.querySelector('#rev-dana [aria-label="Pin dana"]')).not.toBeNull();
+  });
+
+  it('pins a person without selecting them, and saves the pin', async () => {
+    await start([]);
+    const optionClick = vi.fn();
+    document.getElementById('rev-dana')!.addEventListener('click', optionClick);
+
+    document.querySelector<HTMLButtonElement>('[aria-label="Pin dana"]')!.click();
+    await settle();
+
+    expect(optionClick).not.toHaveBeenCalled();
+    expect(stored.map((person) => [person.id, person.login])).toEqual([['55', 'dana']]);
+    expect(pinnedLogins()).toEqual(['dana']);
+    expect(document.querySelector('#rev-dana [aria-label="Unpin dana"]')).not.toBeNull();
+  });
+
+  it('picks a listed pinned person through GitHub’s own option', async () => {
+    await start([cara]);
+    const optionClick = vi.fn();
+    document.getElementById('rev-cara')!.addEventListener('click', optionClick);
+
+    pinnedRow('cara').click();
+    expect(optionClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('searches for an unlisted pinned person, picks them, then restores the filter', async () => {
+    await start([ada]);
+    vi.useFakeTimers();
+    input().addEventListener('input', () => {
+      if (input().value === 'ada' && !document.getElementById('rev-ada')) {
+        const option = document.getElementById('rev-dana')!.cloneNode(true) as HTMLElement;
+        option.id = 'rev-ada';
+        option.querySelector('img')!.setAttribute('src', ada.avatarUrl);
+        option.querySelector('[data-component="ActionList.Item.Label"]')!.textContent = 'ada';
+        setTimeout(() => document.querySelector('ul[aria-label="Everyone else"]')!.append(option), 300);
+      }
+    });
+
+    const picked: string[] = [];
+    document.querySelector('ul[role="listbox"]')!.addEventListener('click', (event) => {
+      picked.push((event.target as Element).closest('li[role="option"]')?.id ?? '');
+    });
+
+    pinnedRow('ada').click();
+    expect(input().value).toBe('ada');
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(picked).toEqual(['rev-ada']);
+    expect(input().value).toBe('');
+  });
+
+  it('filters pinned people with GitHub’s filter box', async () => {
+    await start([ada, cara]);
+    input().value = 'love';
+    input().dispatchEvent(new Event('input', { bubbles: true }));
+    await settle();
+    expect(pinnedLogins()).toEqual(['ada']);
+  });
+
+  it('removes everything it added on stop', async () => {
+    await start([ada]);
+    controller!.stop();
+    controller = null;
+    expect(document.querySelectorAll('[data-ght-pp-pinned], [data-ght-pp-pin]')).toHaveLength(0);
+  });
+});

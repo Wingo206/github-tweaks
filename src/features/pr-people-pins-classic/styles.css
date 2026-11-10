@@ -1,0 +1,67 @@
+.hx_rsm-content label.select-menu-item:has(> button.ght-pins__button),
+details-menu.select-menu-modal label.select-menu-item:has(> button.ght-pins__button) {
+  position: relative;
+  padding-right: 32px;
+}
+
+.hx_rsm-content label.select-menu-item[data-ght-pinned-row],
+details-menu.select-menu-modal label.select-menu-item[data-ght-pinned-row] {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.hx_rsm-content [data-ght-pinned-row] .select-menu-item-gravatar,
+details-menu.select-menu-modal [data-ght-pinned-row] .select-menu-item-gravatar {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+.hx_rsm-content [data-ght-pinned-row] img.js-avatar,
+details-menu.select-menu-modal [data-ght-pinned-row] img.js-avatar {
+  width: 20px;
+  height: 20px;
+  max-width: 20px;
+  border-radius: 50%;
+}
+
+.hx_rsm-content [data-ght-pinned-row] .select-menu-item-text,
+details-menu.select-menu-modal [data-ght-pinned-row] .select-menu-item-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hx_rsm-content label.select-menu-item > button.ght-pins__button,
+details-menu.select-menu-modal label.select-menu-item > button.ght-pins__button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fgColor-muted, #656d76);
+  line-height: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.hx_rsm-content label.select-menu-item > button.ght-pins__button[aria-pressed='true'],
+details-menu.select-menu-modal label.select-menu-item > button.ght-pins__button[aria-pressed='true'] {
+  color: var(--fgColor-accent, #0969da);
+}
+
+.hx_rsm-content label.select-menu-item:hover > button.ght-pins__button,
+.hx_rsm-content label.select-menu-item:focus-within > button.ght-pins__button,
+details-menu.select-menu-modal label.select-menu-item:hover > button.ght-pins__button,
+details-menu.select-menu-modal label.select-menu-item:focus-within > button.ght-pins__button {
+  color: inherit;
+}

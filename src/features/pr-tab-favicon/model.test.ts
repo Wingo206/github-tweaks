@@ -3,8 +3,8 @@ import { FAVICON_MODES, parsePrTab, renderFavicon } from './model';
 
 describe('parsePrTab', () => {
   it.each([
-    ['/acme/widgets/pull/42', 'conversation'],
-    ['/acme/widgets/pull/42/', 'conversation'],
+    ['/acme/widgets/pull/42', 'overview'],
+    ['/acme/widgets/pull/42/', 'overview'],
     ['/acme/widgets/pull/42/commits', 'commits'],
     ['/acme/widgets/pull/42/commits/b9d2bd8f0fc13e83ddd3fbb042971a4722eaf967', 'commits'],
     ['/acme/widgets/pull/42/checks', 'checks'],

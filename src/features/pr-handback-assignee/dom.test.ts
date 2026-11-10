@@ -3,127 +3,97 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   clearHandbackUi,
-  findAssigneesRoot,
   HANDBACK_BUTTON_CLASS,
   HANDBACK_ROOT_ATTRIBUTE,
-  readAssigneeLogins,
-  syncHandbackUi,
+  overviewAssignees,
+  readOverviewAssigneeLogins,
+  type HandbackRenderOptions,
 } from './dom';
 
-const assignedFixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/assignees-assigned.html'),
-  'utf8',
-);
-const emptyFixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/assignees-empty.html'),
+const sidebar = readFileSync(
+  resolve(process.cwd(), 'tests/fixtures/pr-handback-assignee/overview-sidebar.html'),
   'utf8',
 );
 
-describe('handback DOM adapter', () => {
-  it('reads assignee logins from the assignees block, not reviewers', () => {
-    document.body.innerHTML = assignedFixture;
-    const root = findAssigneesRoot()!;
-    expect(root.getAttribute('data-channel-event-name')).toBe(
-      'assignees_updated',
-    );
-    expect(readAssigneeLogins(root)).toEqual(['reviewer', 'teammate']);
+const EMPTY_ASSIGNEES = `<section aria-label="Assignees" data-overview-sidebar-item="true"><h4><button type="button" aria-label="Manage assignees" aria-haspopup="dialog"><span>Assignees</span></button></h4><div><span>No one—<button data-component="Button" type="button" data-variant="link">assign yourself</button></span></div></section>`;
+
+function options(overrides: Partial<HandbackRenderOptions> = {}): HandbackRenderOptions {
+  return {
+    viewerLogin: 'reviewer',
+    authorLogin: 'author',
+    uiState: 'idle',
+    errorMessage: null,
+    onHandback: vi.fn(),
+    ...overrides,
+  };
+}
+
+function root(): HTMLElement {
+  return overviewAssignees.findRoot(document)!;
+}
+
+describe('Overview Assignees adapter', () => {
+  it('finds the Assignees section, not Reviewers, and reads its logins', () => {
+    document.body.innerHTML = sidebar;
+    expect(root().getAttribute('aria-label')).toBe('Assignees');
+    expect(readOverviewAssigneeLogins(root())).toEqual(['reviewer', 'teammate']);
   });
 
-  it('injects a header action like review now / approve now', () => {
-    document.body.innerHTML = assignedFixture;
-    const root = findAssigneesRoot()!;
+  it('puts one action in the heading, beside GitHub’s heading button rather than inside it', () => {
+    document.body.innerHTML = sidebar;
     const onHandback = vi.fn();
+    overviewAssignees.sync(root(), options({ onHandback }));
+    const result = overviewAssignees.sync(root(), options({ onHandback }));
 
-    syncHandbackUi(root, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'idle',
-      errorMessage: null,
-      onHandback,
-    });
-    syncHandbackUi(root, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'idle',
-      errorMessage: null,
-      onHandback,
-    });
-
-    const mounts = root.querySelectorAll(`[${HANDBACK_ROOT_ATTRIBUTE}]`);
+    expect(result).toEqual({ visible: true, assigneeLogins: ['reviewer', 'teammate'] });
+    const mounts = root().querySelectorAll(`[${HANDBACK_ROOT_ATTRIBUTE}]`);
     expect(mounts).toHaveLength(1);
+    expect(mounts[0]!.parentElement?.tagName).toBe('H4');
+    expect(mounts[0]!.previousElementSibling?.getAttribute('aria-label')).toBe('Manage assignees');
+    expect(mounts[0]!.textContent).toBe('– reassign author');
 
-    const mount = mounts[0]!;
-    const summary = root.querySelector('#assignees-select-menu > summary');
-    expect(summary?.contains(mount)).toBe(true);
-    expect(mount.className).toContain('text-normal');
-    expect(mount.className).toContain('color-fg-muted');
-    expect(mount.textContent).toContain('–');
-
-    const button = mount.querySelector('button')!;
-    expect(button.textContent).toBe('reassign author');
-    expect(button.className).toContain('btn-link');
-    expect(button.className).toContain('Link--muted');
-    expect(button.className).toContain('Link--inTextBlock');
-
+    const picker = vi.fn();
+    root().querySelector('button[aria-label="Manage assignees"]')!.addEventListener('click', picker);
+    const button = mounts[0]!.querySelector<HTMLButtonElement>(`.${HANDBACK_BUTTON_CLASS}`)!;
+    expect(button.getAttribute('aria-label')).toBe('Reassign to author');
     button.click();
     expect(onHandback).toHaveBeenCalledTimes(1);
+    expect(picker).not.toHaveBeenCalled();
   });
 
-  it('hides the button for empty assignees and cleans up', () => {
-    document.body.innerHTML = emptyFixture;
-    const root = findAssigneesRoot()!;
+  it('stays hidden when the viewer is not assigned or is the author', () => {
+    document.body.innerHTML = sidebar;
+    expect(overviewAssignees.sync(root(), options({ viewerLogin: 'someone' })).visible).toBe(false);
+    expect(overviewAssignees.sync(root(), options({ authorLogin: 'reviewer' })).visible).toBe(false);
+    expect(root().querySelector(`[${HANDBACK_ROOT_ATTRIBUTE}]`)).toBeNull();
 
-    syncHandbackUi(root, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'idle',
-      errorMessage: null,
-      onHandback: vi.fn(),
-    });
-    expect(root.querySelector(`[${HANDBACK_ROOT_ATTRIBUTE}]`)).toBeNull();
-
-    document.body.innerHTML = assignedFixture;
-    const assignedRoot = findAssigneesRoot()!;
-    syncHandbackUi(assignedRoot, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'idle',
-      errorMessage: null,
-      onHandback: vi.fn(),
-    });
-    clearHandbackUi();
-    expect(
-      document.querySelector(`[${HANDBACK_ROOT_ATTRIBUTE}]`),
-    ).toBeNull();
+    document.body.innerHTML = EMPTY_ASSIGNEES;
+    expect(overviewAssignees.sync(root(), options())).toEqual({ visible: false, assigneeLogins: [] });
   });
 
-  it('shows updating and error states', () => {
-    document.body.innerHTML = assignedFixture;
-    const root = findAssigneesRoot()!;
-
-    syncHandbackUi(root, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'updating',
-      errorMessage: null,
-      onHandback: vi.fn(),
-    });
-    const button = root.querySelector<HTMLButtonElement>(
-      `.${HANDBACK_BUTTON_CLASS}`,
-    )!;
-    expect(button.textContent).toBe('Updating…');
+  it('shows updating, done, and error states', () => {
+    document.body.innerHTML = sidebar;
+    overviewAssignees.sync(root(), options({ uiState: 'updating' }));
+    const button = root().querySelector<HTMLButtonElement>(`.${HANDBACK_BUTTON_CLASS}`)!;
+    expect(button.textContent).toBe('reassigning…');
     expect(button.disabled).toBe(true);
 
-    syncHandbackUi(root, {
-      viewerLogin: 'reviewer',
-      authorLogin: 'author',
-      uiState: 'error',
-      errorMessage: 'Couldn’t update assignees',
-      onHandback: vi.fn(),
-    });
-    expect(root.querySelector('[role="alert"]')?.textContent).toBe(
-      'Couldn’t update assignees',
-    );
+    overviewAssignees.sync(root(), options({ uiState: 'error', errorMessage: 'Couldn’t update assignees' }));
+    const alert = root().querySelector('[role="alert"]')!;
+    expect(alert.textContent).toBe('Couldn’t update assignees');
+    expect(alert.previousElementSibling?.tagName).toBe('H4');
     expect(button.disabled).toBe(false);
+
+    overviewAssignees.sync(root(), options({ uiState: 'done' }));
+    expect(root().querySelector(`.${HANDBACK_BUTTON_CLASS}`)).toBeNull();
+    expect(root().querySelector('[role="status"]')?.textContent).toBe('reassigned, reload to update');
+    expect(root().querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('cleans up', () => {
+    document.body.innerHTML = sidebar;
+    overviewAssignees.sync(root(), options());
+    clearHandbackUi();
+    expect(document.querySelector(`[${HANDBACK_ROOT_ATTRIBUTE}]`)).toBeNull();
   });
 });

@@ -28,6 +28,16 @@ describe('head branch row', () => {
     clearCheckoutUi();
     expect(document.querySelectorAll(`[${MARKER}]`)).toHaveLength(0);
   });
+
+  it('also goes at the end of GitHub’s sticky bar title block, after Copy link', () => {
+    document.body.innerHTML = readFileSync(resolve(process.cwd(), 'tests/fixtures/pr-sticky-tabs/overview.html'), 'utf8');
+    syncButtons(document, createButton);
+    const buttons = syncButtons(document, createButton);
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]!.previousElementSibling?.getAttribute('aria-label')).toBe('Copy head branch name to clipboard');
+    expect(buttons[1]!.closest('[data-testid="diff-comparison-viewer-sticky-header-bar"]')).not.toBeNull();
+    expect(buttons[1]!.previousElementSibling?.textContent).toBe('Copy link');
+  });
 });
 
 describe('renderButton', () => {

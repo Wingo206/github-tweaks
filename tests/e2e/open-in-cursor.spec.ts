@@ -14,7 +14,7 @@ interface ReceivedRequest {
 test('opens a review thread through the companion server', async () => {
   const extensionPath = resolve(process.cwd(), '.output/chrome-mv3');
   const threads = readFileSync(
-    resolve(process.cwd(), 'tests/fixtures/open-in-cursor/conversation-review-threads.html'),
+    resolve(process.cwd(), 'tests/fixtures/open-in-cursor/overview-review-threads.html'),
     'utf8',
   );
 

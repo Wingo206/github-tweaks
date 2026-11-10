@@ -12,8 +12,17 @@ import {
   syncTabs,
 } from './dom';
 
-function fixture(name: 'conversation' | 'files-changed'): string {
-  return readFileSync(resolve(process.cwd(), `tests/fixtures/pr-sticky-tabs/${name}.html`), 'utf8');
+function fixture(path: string): string {
+  return readFileSync(resolve(process.cwd(), `tests/fixtures/${path}.html`), 'utf8');
+}
+
+function showOverview(): void {
+  document.body.innerHTML = fixture('pr-sticky-tabs/overview');
+}
+
+function selectTab(href: string): void {
+  document.querySelector('nav[aria-label="Pull request"] a[aria-current]')!.removeAttribute('aria-current');
+  document.querySelector(`nav[aria-label="Pull request"] a[href="${href}"]`)!.setAttribute('aria-current', 'page');
 }
 
 function navs(): HTMLElement[] {
@@ -26,32 +35,38 @@ function tabSummary(nav: HTMLElement): string[] {
   );
 }
 
+function bar(): Element {
+  return document.querySelector('[data-testid="diff-comparison-viewer-sticky-header-bar"]')!;
+}
+
 describe('findNativeTabs', () => {
   it('reads GitHub’s tab bar in order', () => {
-    document.body.innerHTML = fixture('conversation');
+    showOverview();
     expect(findNativeTabs(document).map(({ link: _link, svg: _svg, ...tab }) => tab)).toEqual([
-      { href: '/acme/widgets/pull/42', label: 'Conversation', count: '8', current: true, icon: 'octicon-comment-discussion' },
+      { href: '/acme/widgets/pull/42', label: 'Overview', count: null, current: true, icon: 'octicon-tasklist' },
       { href: '/acme/widgets/pull/42/commits', label: 'Commits', count: '2', current: false, icon: 'octicon-git-commit' },
-      { href: '/acme/widgets/pull/42/checks', label: 'Checks', count: null, current: false, icon: 'octicon-checklist' },
+      { href: '/acme/widgets/pull/42/checks', label: 'Checks', count: '5', current: false, icon: 'octicon-checklist' },
       { href: '/acme/widgets/pull/42/changes', label: 'Files changed', count: '26', current: false, icon: 'octicon-file-diff' },
     ]);
   });
 
   it('returns nothing without GitHub’s tab bar', () => {
-    document.body.innerHTML = '<nav><a href="/acme/widgets/pull/42">Conversation</a></nav>';
+    document.body.innerHTML = '<nav><a href="/acme/widgets/pull/42">Overview</a></nav>';
     expect(findNativeTabs(document)).toEqual([]);
   });
 });
 
 describe('findNativeLineCounts', () => {
-  it('reads the totals beside GitHub’s tab bar', () => {
-    document.body.innerHTML = fixture('conversation');
+  it('reads the totals from the main header', () => {
+    showOverview();
     expect(findNativeLineCounts(document)).toEqual({ additions: 1479, deletions: 1 });
   });
 
   it('ignores the per-file counts in diff headers', () => {
-    document.body.innerHTML = fixture('conversation');
-    document.querySelector('[data-component="PH_Navigation"] .sr-only')!.remove();
+    showOverview();
+    [...document.querySelectorAll('[data-component="PageHeader"] .sr-only')]
+      .find((label) => label.textContent?.startsWith('Lines changed'))!
+      .remove();
     document.body.insertAdjacentHTML(
       'beforeend',
       '<div data-diff-header-wrapper="true"><span class="sr-only">Lines changed: 3 additions &amp; 2 deletions</span></div>',
@@ -62,63 +77,52 @@ describe('findNativeLineCounts', () => {
 
 describe('showsLineCounts', () => {
   it('leaves Files changed to its own toolbar meter', () => {
-    document.body.innerHTML = fixture('conversation');
+    showOverview();
     expect(showsLineCounts(findNativeTabs(document))).toBe(true);
-    document.body.innerHTML = fixture('files-changed');
+    selectTab('/acme/widgets/pull/42/changes');
     expect(showsLineCounts(findNativeTabs(document))).toBe(false);
   });
 });
 
 describe('findStickyMounts', () => {
-  it('picks the sticky header’s branch group, not the main header’s', () => {
-    document.body.innerHTML = fixture('conversation');
+  it('picks the sticky bar’s title block, not the main header', () => {
+    showOverview();
     const mounts = findStickyMounts(document);
     expect(mounts).toHaveLength(1);
-    expect(mounts[0]!.closest('h2')).not.toBeNull();
-    expect(mounts[0]!.querySelectorAll('a[data-component="BranchName"]')).toHaveLength(2);
-  });
-
-  it('picks the stuck files toolbar on Files changed', () => {
-    document.body.innerHTML = fixture('files-changed');
-    const mounts = findStickyMounts(document);
-    expect(mounts).toHaveLength(1);
-    expect(mounts[0]!.closest('section')).not.toBeNull();
+    expect(bar().contains(mounts[0]!)).toBe(true);
+    expect(mounts[0]!.querySelector('a[href="#top"]')).not.toBeNull();
   });
 });
 
 describe('syncTabs', () => {
-  it.each(['conversation', 'files-changed'] as const)(
-    'places one tab bar right after the copy and checkout buttons on %s, idempotently',
-    (name) => {
-      document.body.innerHTML = fixture(name);
-      const tabs = findNativeTabs(document);
-      syncTabs(document, tabs, null, createNav);
-      const first = navs()[0];
-      syncTabs(document, findNativeTabs(document), null, createNav);
+  it('places one tab bar right after the sticky bar’s title block, idempotently', () => {
+    showOverview();
+    syncTabs(document, findNativeTabs(document), null, createNav);
+    const first = navs()[0];
+    syncTabs(document, findNativeTabs(document), null, createNav);
 
-      expect(navs()).toHaveLength(1);
-      expect(navs()[0]).toBe(first);
-      const group = navs()[0]!.previousElementSibling!;
-      expect(group.lastElementChild!.lastElementChild!.getAttribute('data-ght-checkout-branch')).toBe('button');
-    },
-  );
+    expect(navs()).toHaveLength(1);
+    expect(navs()[0]).toBe(first);
+    expect(bar().contains(navs()[0]!)).toBe(true);
+    expect(navs()[0]!.previousElementSibling!.querySelector('a[href="#top"]')).not.toBeNull();
+  });
 
   it('shows each tab with its icon, name, count and current state', () => {
-    document.body.innerHTML = fixture('files-changed');
+    showOverview();
+    selectTab('/acme/widgets/pull/42/changes');
     syncTabs(document, findNativeTabs(document), null, createNav);
     const nav = navs()[0]!;
-    expect(tabSummary(nav)).toEqual(['Conversation (35)', 'Commits (10)', 'Checks (5)', 'Files changed (81) *']);
+    expect(tabSummary(nav)).toEqual(['Overview', 'Commits (2)', 'Checks (5)', 'Files changed (26) *']);
     const files = nav.querySelector<HTMLAnchorElement>('a[aria-current="page"]')!;
     expect(files.getAttribute('href')).toBe('/acme/widgets/pull/42/changes');
     expect(files.querySelector('svg')?.getAttribute('class')).toBe('octicon octicon-file-diff ght-pst-icon');
     expect(files.querySelector('.ght-pst-label')?.textContent).toBe('Files changed');
-    expect(files.querySelector('.ght-pst-count')?.textContent).toBe('81');
-    expect(files.hasAttribute('data-hotkey')).toBe(false);
+    expect(files.querySelector('.ght-pst-count')?.textContent).toBe('26');
     expect(files.id).toBe('');
   });
 
   it('replaces the bar when a count or the current tab changes', () => {
-    document.body.innerHTML = fixture('conversation');
+    showOverview();
     syncTabs(document, findNativeTabs(document), null, createNav);
     const first = navs()[0];
 
@@ -130,7 +134,7 @@ describe('syncTabs', () => {
   });
 
   it('shows the line totals after the tabs, and replaces the bar when they change', () => {
-    document.body.innerHTML = fixture('conversation');
+    showOverview();
     const tabs = findNativeTabs(document);
     syncTabs(document, tabs, { additions: 1479, deletions: 1 }, createNav);
     const first = navs()[0]!;
@@ -151,7 +155,7 @@ describe('syncTabs', () => {
   });
 
   it('removes the bar when GitHub’s tab bar goes away, and on cleanup', () => {
-    document.body.innerHTML = fixture('conversation');
+    showOverview();
     syncTabs(document, findNativeTabs(document), null, createNav);
     expect(navs()).toHaveLength(1);
 
@@ -162,4 +166,52 @@ describe('syncTabs', () => {
     clearStickyTabs();
     expect(document.querySelectorAll(`[${MARKER}]`)).toHaveLength(0);
   });
+});
+
+// TODO(classic-1): the classic layout's tab bar and sticky headers.
+describe('classic layout', () => {
+  function showClassic(name: 'conversation' | 'files-changed'): void {
+    document.body.innerHTML = fixture(`classic/pr-sticky-tabs/${name}`);
+  }
+
+  it('reads the classic tab bar and its line totals', () => {
+    showClassic('conversation');
+    expect(findNativeTabs(document).map(({ label, count, current }) => [label, count, current])).toEqual([
+      ['Conversation', '8', true],
+      ['Commits', '2', false],
+      ['Checks', null, false],
+      ['Files changed', '26', false],
+    ]);
+    expect(findNativeLineCounts(document)).toEqual({ additions: 1479, deletions: 1 });
+  });
+
+  it('picks the sticky header’s branch group, not the main header’s', () => {
+    showClassic('conversation');
+    const mounts = findStickyMounts(document);
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0]!.closest('h2')).not.toBeNull();
+    expect(mounts[0]!.querySelectorAll('a[data-component="BranchName"]')).toHaveLength(2);
+  });
+
+  it('picks the stuck files toolbar on Files changed', () => {
+    showClassic('files-changed');
+    const mounts = findStickyMounts(document);
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0]!.closest('section')).not.toBeNull();
+  });
+
+  it.each(['conversation', 'files-changed'] as const)(
+    'places one tab bar right after the copy and checkout buttons on %s, idempotently',
+    (name) => {
+      showClassic(name);
+      syncTabs(document, findNativeTabs(document), null, createNav);
+      const first = navs()[0];
+      syncTabs(document, findNativeTabs(document), null, createNav);
+
+      expect(navs()).toHaveLength(1);
+      expect(navs()[0]).toBe(first);
+      const group = navs()[0]!.previousElementSibling!;
+      expect(group.lastElementChild!.lastElementChild!.getAttribute('data-ght-checkout-branch')).toBe('button');
+    },
+  );
 });

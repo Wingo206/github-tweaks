@@ -1,6 +1,7 @@
 /**
  * Pull request header anchors shared by features that mount beside GitHub's
- * branch summary ("X wants to merge … into base from head").
+ * branch summary ("X wants to merge … into base from head") or in its sticky
+ * bar.
  */
 
 const COPY_HEAD_LABEL = 'Copy head branch name to clipboard';
@@ -21,4 +22,14 @@ export function findHeadBranchMounts(root: ParentNode): HeadBranchMount[] {
     const link = anchor.parentElement?.querySelector<HTMLAnchorElement>('a[data-component="BranchName"]');
     return link ? [{ anchor, link }] : [];
   });
+}
+
+/**
+ * The title block (state, number, `#top` title link, Copy link) of the bar
+ * GitHub keeps at the top of every pull request tab while scrolling.
+ */
+export function findStickyBarTitleBlocks(root: ParentNode): Element[] {
+  return [
+    ...root.querySelectorAll('[data-testid="diff-comparison-viewer-sticky-header-bar"] a[href="#top"]'),
+  ].flatMap((link) => (link.parentElement ? [link.parentElement] : []));
 }

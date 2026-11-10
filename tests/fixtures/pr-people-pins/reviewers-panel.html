@@ -1,0 +1,33 @@
+<div id="__primerPortalRoot__">
+  <div data-component="Portal">
+    <div role="dialog" data-component="AnchoredOverlay" aria-labelledby="rev-title" data-focus-trap="active">
+      <div data-variant="anchored" data-component="SelectPanel">
+        <div data-component="SelectPanel.Header"><div><h1 data-component="SelectPanel.Title" id="rev-title">Request up to 100 reviewers</h1></div></div>
+        <div data-testid="filtered-action-list" data-component="FilteredActionList">
+          <div data-component="FilteredActionList.Header">
+            <span class="TextInput-wrapper" data-component="TextInput"><input placeholder="Type or choose a user" role="combobox" aria-expanded="true" aria-controls="rev-list" aria-label="Filter reviewers" data-component="input" type="text" value=""></span>
+          </div>
+          <span id="rev-hint">Items will be filtered as you type</span>
+          <div>
+            <ul role="listbox" aria-labelledby="rev-title" data-component="ActionList" aria-multiselectable="true" id="rev-list">
+              <li data-component="ActionList.Group" role="none">
+                <div role="presentation" aria-hidden="true" data-component="GroupHeadingWrap"><span>Suggestions</span></div>
+                <ul aria-label="Suggestions" role="group">
+                  <li tabindex="-1" aria-selected="false" role="option" id="rev-copilot" data-id="Copilot" data-dd-action-name="pull_requests.reviewers.request" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="16" height="16" data-testid="github-avatar" src="https://avatars.githubusercontent.com/in/946600?s=40&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><div data-description-variant="block"><span data-component="ActionList.Item.Label">Copilot</span><span data-component="ActionList.Description">AI coding agent for tasks, projects, and automated work</span></div></span></div></li>
+                  <li tabindex="-1" aria-selected="false" role="option" id="rev-cara" data-id="cara" data-dd-action-name="pull_requests.reviewers.request" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="16" height="16" data-testid="github-avatar" src="https://avatars.githubusercontent.com/u/11?s=40&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><div data-description-variant="block"><span data-component="ActionList.Item.Label">cara<span>Cara Cole</span></span><span data-component="ActionList.Description">Recently edited these files</span></div></span></div></li>
+                </ul>
+              </li>
+              <li data-component="ActionList.Group" role="none">
+                <div role="presentation" aria-hidden="true" data-component="GroupHeadingWrap"><span>Everyone else</span></div>
+                <ul aria-label="Everyone else" role="group">
+                  <li tabindex="-1" aria-selected="true" role="option" id="rev-ben" data-id="ben" data-dd-action-name="pull_requests.reviewers.remove" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="16" height="16" data-testid="github-avatar" src="https://avatars.githubusercontent.com/u/22?s=40&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><span data-component="ActionList.Item.Label"><span><span>ben</span><span>Ben Adey</span></span></span></span></div></li>
+                  <li tabindex="-1" aria-selected="false" role="option" id="rev-dana" data-id="dana" data-dd-action-name="pull_requests.reviewers.request" data-component="ActionList.Item"><div data-size="medium"><span></span><span data-component="ActionList.Selection"><div></div></span><span data-component="ActionList.LeadingVisual"><img data-component="Avatar" alt="" width="16" height="16" data-testid="github-avatar" src="https://avatars.githubusercontent.com/u/55?s=40&amp;v=4"></span><span data-component="ActionList.Item--DividerContainer"><span data-component="ActionList.Item.Label"><span><span>dana</span></span></span></span></div></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

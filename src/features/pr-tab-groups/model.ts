@@ -19,7 +19,7 @@ export interface GroupMove {
 
 /**
  * `owner/repo#number`, lowercased, for any page of a pull request on
- * github.com (Conversation, Commits, Checks, Files changed); otherwise null.
+ * github.com (Overview, Commits, Checks, Files changed); otherwise null.
  */
 export function pullRequestKey(url: string | URL | undefined): string | null {
   if (!url) {
