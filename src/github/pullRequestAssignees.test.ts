@@ -53,7 +53,7 @@ describe('pullRequestAssignees', () => {
     });
   });
 
-  it('removes the viewer and adds the author when needed', async () => {
+  it('swaps the viewer for the author in one change, keeping other assignees', async () => {
     graphqlMock
       .mockResolvedValueOnce({
         viewer: { login: 'reviewer', id: 'USER_reviewer' },
@@ -66,12 +66,14 @@ describe('pullRequestAssignees', () => {
               id: 'USER_author',
             },
             assignees: {
-              nodes: [{ login: 'reviewer', id: 'USER_reviewer' }],
+              nodes: [
+                { login: 'reviewer', id: 'USER_reviewer' },
+                { login: 'teammate', id: 'USER_teammate' },
+              ],
             },
           },
         },
       })
-      .mockResolvedValueOnce({})
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({
         viewer: { login: 'reviewer', id: 'USER_reviewer' },
@@ -92,24 +94,15 @@ describe('pullRequestAssignees', () => {
 
     await handbackAssignee('token', ref);
 
-    expect(graphqlMock).toHaveBeenCalledTimes(4);
-    expect(graphqlMock.mock.calls[1]?.[1]).toContain(
-      'removeAssigneesFromAssignable',
-    );
+    expect(graphqlMock).toHaveBeenCalledTimes(3);
+    expect(graphqlMock.mock.calls[1]?.[1]).toContain('updatePullRequest');
     expect(graphqlMock.mock.calls[1]?.[2]).toEqual({
-      assignableId: 'PR_1',
-      assigneeIds: ['USER_reviewer'],
-    });
-    expect(graphqlMock.mock.calls[2]?.[1]).toContain(
-      'addAssigneesToAssignable',
-    );
-    expect(graphqlMock.mock.calls[2]?.[2]).toEqual({
-      assignableId: 'PR_1',
-      assigneeIds: ['USER_author'],
+      pullRequestId: 'PR_1',
+      assigneeIds: ['USER_author', 'USER_teammate'],
     });
   });
 
-  it('skips adding the author when already assigned', async () => {
+  it('keeps the author once when they are already assigned', async () => {
     graphqlMock
       .mockResolvedValueOnce({
         viewer: { login: 'reviewer', id: 'USER_reviewer' },
@@ -151,11 +144,10 @@ describe('pullRequestAssignees', () => {
     await handbackAssignee('token', ref);
 
     expect(graphqlMock).toHaveBeenCalledTimes(3);
-    expect(
-      graphqlMock.mock.calls.some(([ , query ]) =>
-        String(query).includes('addAssigneesToAssignable'),
-      ),
-    ).toBe(false);
+    expect(graphqlMock.mock.calls[1]?.[2]).toEqual({
+      pullRequestId: 'PR_1',
+      assigneeIds: ['USER_author'],
+    });
   });
 
   it('rejects when the viewer is not assigned', async () => {

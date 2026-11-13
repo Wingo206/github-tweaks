@@ -34,31 +34,19 @@ const HANDBACK_CONTEXT_QUERY = `
   }
 `;
 
-const REMOVE_ASSIGNEES_MUTATION = `
-  mutation RemoveAssignees($assignableId: ID!, $assigneeIds: [ID!]!) {
-    removeAssigneesFromAssignable(input: {
-      assignableId: $assignableId
+/**
+ * Sets the whole assignee list in one change. GitHub's Overview sidebar
+ * refetches once per burst of live updates, so a separate remove and add
+ * leaves it showing only the removal until the page is reloaded.
+ */
+const SET_ASSIGNEES_MUTATION = `
+  mutation SetAssignees($pullRequestId: ID!, $assigneeIds: [ID!]!) {
+    updatePullRequest(input: {
+      pullRequestId: $pullRequestId
       assigneeIds: $assigneeIds
     }) {
-      assignable {
-        ... on PullRequest {
-          id
-        }
-      }
-    }
-  }
-`;
-
-const ADD_ASSIGNEES_MUTATION = `
-  mutation AddAssignees($assignableId: ID!, $assigneeIds: [ID!]!) {
-    addAssigneesToAssignable(input: {
-      assignableId: $assignableId
-      assigneeIds: $assigneeIds
-    }) {
-      assignable {
-        ... on PullRequest {
-          id
-        }
+      pullRequest {
+        id
       }
     }
   }
@@ -149,17 +137,13 @@ export async function handbackAssignee(
     throw new GitHubApiError('You are not assigned to this pull request.');
   }
 
-  await graphql(token, REMOVE_ASSIGNEES_MUTATION, {
-    assignableId: context.assignableId,
-    assigneeIds: [viewerAssigneeId],
+  const others = Object.entries(context.assigneeIdsByLogin)
+    .filter(([login]) => login !== viewerKey && login !== authorKey)
+    .map(([, id]) => id);
+  await graphql(token, SET_ASSIGNEES_MUTATION, {
+    pullRequestId: context.assignableId,
+    assigneeIds: [context.authorId, ...others],
   });
-
-  if (!context.assigneeIdsByLogin[authorKey]) {
-    await graphql(token, ADD_ASSIGNEES_MUTATION, {
-      assignableId: context.assignableId,
-      assigneeIds: [context.authorId],
-    });
-  }
 
   return loadHandbackContext(token, ref);
 }
