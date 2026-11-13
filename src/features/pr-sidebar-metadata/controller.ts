@@ -11,6 +11,7 @@ import {
   indexNativeViewedButtons,
   isNativeViewedButton,
   isNativeViewedPressed,
+  setDiffCollapsed,
   SidebarRenderer,
 } from './dom';
 import {
@@ -293,7 +294,18 @@ export class PrSidebarController {
 
     this.queuedMutations.set(path, viewed);
     this.renderCurrent();
+    this.collapseDiffWithoutNativeButton(path, viewed);
     void this.drainMutations(path);
+  }
+
+  /**
+   * GitHub collapses a viewed diff only through its own Viewed button, which
+   * some views (such as a single commit) do not show.
+   */
+  private collapseDiffWithoutNativeButton(path: string, viewed: boolean): void {
+    if (!indexNativeViewedButtons().has(path)) {
+      setDiffCollapsed(path, viewed);
+    }
   }
 
   private isMutating(path: string): boolean {
@@ -329,11 +341,9 @@ export class PrSidebarController {
           }
           this.intendedViewed.delete(path);
           this.nativeClicks.delete(path);
-          this.snapshot = updateFileViewedState(
-            this.snapshot,
-            path,
-            this.confirmedViewed.get(path) ?? !viewed,
-          );
+          const confirmed = this.confirmedViewed.get(path) ?? !viewed;
+          this.snapshot = updateFileViewedState(this.snapshot, path, confirmed);
+          this.collapseDiffWithoutNativeButton(path, confirmed);
           this.renderer.setViewedError(
             path,
             error instanceof Error

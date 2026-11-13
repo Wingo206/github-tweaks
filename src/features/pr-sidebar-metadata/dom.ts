@@ -372,13 +372,17 @@ export function getNativeViewedPath(button: HTMLButtonElement): string | null {
   const header = button.closest<HTMLElement>(
     '[data-diff-header-wrapper="true"]',
   );
-  const explicitPath = header?.querySelector<HTMLElement>('[data-file-path]')
+  return header ? getDiffHeaderPath(header) : null;
+}
+
+function getDiffHeaderPath(header: HTMLElement): string | null {
+  const explicitPath = header.querySelector<HTMLElement>('[data-file-path]')
     ?.dataset.filePath;
   if (explicitPath) {
     return explicitPath;
   }
 
-  const link = header?.querySelector<HTMLAnchorElement>('h3 a[href^="#diff-"]');
+  const link = header.querySelector<HTMLAnchorElement>('h3 a[href^="#diff-"]');
   const treePath = link
     ? document
         .querySelector(`#pr-file-tree a[href="${link.getAttribute('href')}"]`)
@@ -428,6 +432,47 @@ export function indexNativeViewedButtons(
     }
   }
   return buttons;
+}
+
+/**
+ * Opens or closes a file's diff with the chevron in its header. Does nothing
+ * when the file's header is not on the page.
+ */
+export function setDiffCollapsed(
+  path: string,
+  collapsed: boolean,
+  doc: Document = document,
+): void {
+  for (const header of doc.querySelectorAll<HTMLElement>(
+    '[data-diff-header-wrapper="true"]',
+  )) {
+    if (getDiffHeaderPath(header) !== path) {
+      continue;
+    }
+    const toggle = findDiffToggle(header);
+    if (toggle && toggle.expanded === collapsed) {
+      toggle.button.click();
+    }
+    return;
+  }
+}
+
+/** The chevron is labelled only by its tooltip, which names the next action. */
+function findDiffToggle(
+  header: HTMLElement,
+): { button: HTMLButtonElement; expanded: boolean } | null {
+  for (const button of header.querySelectorAll<HTMLButtonElement>(
+    'button[aria-labelledby]',
+  )) {
+    const labelId = button.getAttribute('aria-labelledby')!.split(/\s+/)[0];
+    const label = labelId
+      ? header.ownerDocument.getElementById(labelId)?.textContent?.trim()
+      : undefined;
+    if (label === 'Collapse file' || label === 'Expand file') {
+      return { button, expanded: label === 'Collapse file' };
+    }
+  }
+  return null;
 }
 
 function findViewedProgressMount(): HTMLElement | null {

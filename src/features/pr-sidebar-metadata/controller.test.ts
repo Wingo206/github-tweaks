@@ -77,6 +77,22 @@ function wireNativeButtons(): void {
   }
 }
 
+/** Stands in for GitHub's diff chevron, whose tooltip names the next action. */
+function wireDiffToggles(): void {
+  for (const tooltip of document.querySelectorAll<HTMLElement>('#tooltip-collapse')) {
+    document
+      .querySelector(`[aria-labelledby="${tooltip.id}"]`)!
+      .addEventListener('click', () => {
+        tooltip.textContent =
+          tooltip.textContent === 'Collapse file' ? 'Expand file' : 'Collapse file';
+      });
+  }
+}
+
+function diffToggleLabel(diffId: string): string | null | undefined {
+  return document.querySelector(`#${diffId} #tooltip-collapse`)?.textContent;
+}
+
 function sidebarCheckbox(path: string): HTMLInputElement {
   return document
     .getElementById(path)!
@@ -189,6 +205,40 @@ describe('PR sidebar controller', () => {
     expect(nativeButton('diff-file-one')?.getAttribute('aria-pressed')).toBe('true');
     expect(sidebarCheckbox('src/index.ts').checked).toBe(true);
     expect(setViewedCalls()).toHaveLength(1);
+  });
+
+  it('collapses a diff without a native Viewed button, and expands it when unmarked', async () => {
+    document.body.innerHTML = sidebarFixture + loadingDiffFixture;
+    wireDiffToggles();
+    const setViewedCalls = mockBackground();
+
+    const controller = createController();
+    await controller.start();
+    sidebarCheckbox('src/index.ts').click();
+    await settle();
+
+    expect(diffToggleLabel('diff-file-one')).toBe('Expand file');
+    expect(setViewedCalls().map((request) => request.viewed)).toEqual([true]);
+
+    sidebarCheckbox('src/index.ts').click();
+    await settle();
+
+    expect(diffToggleLabel('diff-file-one')).toBe('Collapse file');
+    expect(setViewedCalls().map((request) => request.viewed)).toEqual([true, false]);
+  });
+
+  it('expands the diff again when marking it viewed fails', async () => {
+    document.body.innerHTML = sidebarFixture + loadingDiffFixture;
+    wireDiffToggles();
+    mockBackground(() => ({ ok: false, error: 'Nope' }));
+
+    const controller = createController();
+    await controller.start();
+    sidebarCheckbox('src/index.ts').click();
+    await settle();
+
+    expect(sidebarCheckbox('src/index.ts').checked).toBe(false);
+    expect(diffToggleLabel('diff-file-one')).toBe('Collapse file');
   });
 
   it('uses the latest choice when the checkbox is toggled during a request', async () => {
