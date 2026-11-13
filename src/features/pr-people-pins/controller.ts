@@ -21,6 +21,15 @@ import { loginKey, togglePin, visiblePins } from './model';
 /** How long GitHub's picker gets to find a pinned person it isn't listing. */
 const SEARCH_TIMEOUT_MS = 4_000;
 const SEARCH_POLL_MS = 100;
+/** How long GitHub gets to check or uncheck an option after it is clicked. */
+const TOGGLE_TIMEOUT_MS = 1_000;
+
+/** A search for a pinned person that the picker isn't listing. */
+interface PendingSearch {
+  root: HTMLElement;
+  /** What the filter box held before the search, and gets back after it. */
+  query: string;
+}
 
 const OWN_CONTROLS = `[${PIN_BUTTON_ATTRIBUTE}], [${PIN_SELECT_ATTRIBUTE}]`;
 
@@ -36,6 +45,14 @@ export class PeoplePinsController {
   private syncQueued = false;
   private loadGeneration = 0;
   private saveGeneration = 0;
+  private search: PendingSearch | null = null;
+  /**
+   * The last selected state seen for each person, per open picker. GitHub
+   * stops listing someone it doesn't suggest once the filter is cleared, even
+   * when they are selected, so the visible options alone would show them as
+   * unselected.
+   */
+  private readonly selections = new Map<HTMLElement, Map<string, boolean>>();
 
   constructor(readonly ref: PullRequestRef) {}
 
@@ -63,6 +80,8 @@ export class PeoplePinsController {
     }
     clearPeoplePins();
     this.pins = [];
+    this.search = null;
+    this.selections.clear();
   }
 
   private async load(): Promise<void> {
@@ -91,7 +110,13 @@ export class PeoplePinsController {
       return;
     }
     this.observer?.disconnect();
-    for (const panel of findPeoplePanels()) {
+    const panels = findPeoplePanels();
+    for (const root of this.selections.keys()) {
+      if (!panels.some((panel) => panel.root === root)) {
+        this.selections.delete(root);
+      }
+    }
+    for (const panel of panels) {
       this.syncPanel(panel);
     }
     this.observeDocument();
@@ -100,14 +125,28 @@ export class PeoplePinsController {
   private syncPanel(panel: PeoplePanel): void {
     const options = readPersonOptions(panel);
     syncPinButtons(options, this.pins);
-    const selected = new Map(options.map(({ person, selected }) => [loginKey(person.login), selected]));
+    const selected = this.selectionsFor(panel.root);
+    for (const option of options) {
+      selected.set(loginKey(option.person.login), option.selected);
+    }
+    // While searching, keep the Pinned section filtered by what the person typed.
+    const query = this.search?.root === panel.root ? this.search.query : panel.input.value;
     syncPinnedSection(
       panel,
-      visiblePins(this.pins, panel.input.value).map((person) => ({
+      visiblePins(this.pins, query).map((person) => ({
         person,
         selected: selected.get(loginKey(person.login)) ?? false,
       })),
     );
+  }
+
+  private selectionsFor(root: HTMLElement): Map<string, boolean> {
+    let selected = this.selections.get(root);
+    if (!selected) {
+      selected = new Map();
+      this.selections.set(root, selected);
+    }
+    return selected;
   }
 
   private listen(): void {
@@ -172,20 +211,53 @@ export class PeoplePinsController {
    * searches for them in its filter box first, then puts the filter back.
    */
   private async selectThroughGitHub(panel: PeoplePanel, person: PinnedPerson): Promise<void> {
+    if (this.search) {
+      return;
+    }
     const listed = findOption(panel, person.login);
     if (listed) {
       listed.click();
       return;
     }
 
-    const query = panel.input.value;
-    setFilterQuery(panel.input, person.login);
-    const found = await this.waitForOption(panel, person.login);
-    if (!found || this.stopped || !panel.input.isConnected) {
-      return;
+    const search: PendingSearch = { root: panel.root, query: panel.input.value };
+    this.search = search;
+    try {
+      setFilterQuery(panel.input, person.login);
+      const found = await this.waitForOption(panel, person.login);
+      if (!found || this.stopped || !panel.input.isConnected) {
+        return;
+      }
+      const wasSelected = isSelected(found);
+      found.click();
+      const selected = await this.waitForToggle(panel, person.login, wasSelected);
+      if (this.stopped || !panel.input.isConnected) {
+        return;
+      }
+      this.selectionsFor(panel.root).set(loginKey(person.login), selected);
+    } finally {
+      if (this.search === search) {
+        this.search = null;
+        if (!this.stopped && panel.input.isConnected) {
+          setFilterQuery(panel.input, search.query);
+        }
+        this.queueSync();
+      }
     }
-    found.click();
-    setFilterQuery(panel.input, query);
+  }
+
+  /** GitHub's selected state for `login` once it differs from `before`, or after a timeout. */
+  private async waitForToggle(panel: PeoplePanel, login: string, before: boolean): Promise<boolean> {
+    let selected = before;
+    for (let waited = 0; waited < TOGGLE_TIMEOUT_MS; waited += SEARCH_POLL_MS) {
+      const option = findOption(panel, login);
+      selected = option ? isSelected(option) : selected;
+      if (this.stopped || selected !== before) {
+        break;
+      }
+      await new Promise((done) => setTimeout(done, SEARCH_POLL_MS));
+    }
+    return selected;
   }
 
   private async waitForOption(panel: PeoplePanel, login: string): Promise<HTMLElement | null> {
@@ -255,4 +327,8 @@ export class PeoplePinsController {
       }),
     );
   }
+}
+
+function isSelected(option: Element): boolean {
+  return option.getAttribute('aria-selected') === 'true';
 }

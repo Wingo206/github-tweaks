@@ -120,10 +120,51 @@ describe('people pins controller', () => {
 
     pinnedRow('ada').click();
     expect(input().value).toBe('ada');
-    await vi.advanceTimersByTimeAsync(500);
+    // This option never changes its checked state, so the filter comes back after the toggle timeout.
+    await vi.advanceTimersByTimeAsync(1_500);
 
     expect(picked).toEqual(['rev-ada']);
     expect(input().value).toBe('');
+  });
+
+  it('keeps showing a searched-for person as picked after GitHub stops listing them', async () => {
+    await start([ada, cara]);
+    vi.useFakeTimers();
+    // GitHub lists someone it doesn't suggest only while the filter finds them.
+    input().addEventListener('input', () => {
+      if (input().value === 'ada') {
+        const option = document.getElementById('rev-dana')!.cloneNode(true) as HTMLElement;
+        option.id = 'rev-ada';
+        option.setAttribute('aria-selected', String(adaSelected));
+        option.querySelector('img')!.setAttribute('src', ada.avatarUrl);
+        option.querySelector('[data-component="ActionList.Item.Label"]')!.textContent = 'ada';
+        option.addEventListener('click', () => {
+          adaSelected = !adaSelected;
+          option.setAttribute('aria-selected', String(adaSelected));
+        });
+        setTimeout(() => document.querySelector('ul[aria-label="Everyone else"]')!.append(option), 300);
+      } else {
+        document.getElementById('rev-ada')?.remove();
+      }
+    });
+    let adaSelected = false;
+
+    pinnedRow('ada').click();
+    await vi.advanceTimersByTimeAsync(100);
+    // The Pinned section keeps following what was typed, not the search.
+    expect(pinnedLogins()).toEqual(['ada', 'cara']);
+    pinnedRow('ada').click();
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(adaSelected).toBe(true);
+    expect(document.getElementById('rev-ada')).toBeNull();
+    expect(pinnedRow('ada').getAttribute('aria-pressed')).toBe('true');
+
+    pinnedRow('ada').click();
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(adaSelected).toBe(false);
+    expect(pinnedRow('ada').getAttribute('aria-pressed')).toBe('false');
   });
 
   it('filters pinned people with GitHub’s filter box', async () => {
