@@ -25,14 +25,19 @@ const renamedDiffFixture = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/file-diff-renamed.html'),
   'utf8',
 );
-const toolbarFixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/files-toolbar.html'),
-  'utf8',
-);
-const rangeToolbarFixture = readFileSync(
-  resolve(process.cwd(), 'tests/fixtures/files-toolbar-range.html'),
-  'utf8',
-);
+const readToolbarFixture = (name: string) =>
+  readFileSync(resolve(process.cwd(), `tests/fixtures/${name}.html`), 'utf8');
+const toolbarFixtures = [
+  ['current', readToolbarFixture('files-toolbar')],
+  ['legacy', readToolbarFixture('files-toolbar-legacy')],
+] as const;
+const commitToolbarFixtures = [
+  ['single-commit', readToolbarFixture('files-toolbar-commit')],
+  ['range', readToolbarFixture('files-toolbar-range')],
+  ['legacy range', readToolbarFixture('files-toolbar-range-legacy')],
+] as const;
+const FILE_CONTROLS =
+  '.file-controls__C6Wwfn, .PullRequestFilesToolbar-module__file-controls__Tgb8F';
 
 const snapshot: PullRequestFilesSnapshot = {
   ref: { owner: 'acme', repository: 'widgets', number: 42 },
@@ -228,8 +233,10 @@ describe('GitHub DOM adapter and renderer', () => {
     ).toBeNull();
   });
 
-  it('appends combined line progress beside the toolbar viewed meter', () => {
-    document.body.innerHTML = toolbarFixture;
+  it.each(toolbarFixtures)(
+    'appends combined line progress beside the %s toolbar viewed meter',
+    (_, fixture) => {
+    document.body.innerHTML = fixture;
     const renderer = new SidebarRenderer({
       onViewedChange: vi.fn(),
       onRetry: vi.fn(),
@@ -255,13 +262,13 @@ describe('GitHub DOM adapter and renderer', () => {
     ).toHaveLength(1);
     expect(
       metadata
-        ?.querySelector('.ght-pr-toolbar-lines__counts')
+        ?.querySelector('.ght-pr-toolbar-meter__counts')
         ?.textContent?.replace(/\s+/g, ' ')
         .trim(),
     ).toBe('0 / 7 changes');
     expect(
       metadata
-        ?.querySelector('.ght-pr-toolbar-lines__ring-value')
+        ?.querySelector('.ght-pr-toolbar-meter__ring-value')
         ?.getAttribute('stroke-dashoffset'),
     ).toBe('38');
     expect(metadata?.querySelector('.sr-only')?.textContent).toBe(
@@ -278,15 +285,19 @@ describe('GitHub DOM adapter and renderer', () => {
     });
     expect(
       metadata
-        ?.querySelector('.ght-pr-toolbar-lines__counts')
+        ?.querySelector('.ght-pr-toolbar-meter__counts')
         ?.textContent?.replace(/\s+/g, ' ')
         .trim(),
     ).toBe('7 / 7 changes');
     expect(
       metadata
-        ?.querySelector('.ght-pr-toolbar-lines__ring-value')
+        ?.querySelector('.ght-pr-toolbar-meter__ring-value')
         ?.getAttribute('stroke-dashoffset'),
     ).toBe('0');
+
+    expect(
+      document.querySelector('[data-ght-pr-metadata="toolbar-files"]'),
+    ).toBeNull();
 
     renderer.clear();
     expect(
@@ -294,20 +305,77 @@ describe('GitHub DOM adapter and renderer', () => {
     ).toBeNull();
   });
 
-  it('renders line progress when a commit range hides native progress', () => {
-    document.body.innerHTML = rangeToolbarFixture;
+  it.each(commitToolbarFixtures)(
+    'renders file and line progress in the %s toolbar, which hides native progress',
+    (_, fixture) => {
+    document.body.innerHTML = fixture;
     const renderer = new SidebarRenderer({
       onViewedChange: vi.fn(),
       onRetry: vi.fn(),
       onOpenSetup: vi.fn(),
     });
 
+    renderer.showLoading();
     expect(renderer.render(snapshot)).toBe(false);
+    expect(renderer.render(snapshot)).toBe(false);
+
+    const controls = document.querySelector<HTMLElement>(FILE_CONTROLS)!;
     expect(
-      document.querySelector(
-        '.PullRequestFilesToolbar-module__file-controls ' +
-          '[data-ght-pr-metadata="toolbar-lines"]',
+      Array.from(controls.children, (child) =>
+        child.getAttribute('data-ght-pr-metadata'),
       ),
+    ).toEqual(['toolbar-files', 'toolbar-lines']);
+
+    const files = controls.querySelector(
+      '[data-ght-pr-metadata="toolbar-files"]',
+    )!;
+    expect(
+      files
+        .querySelector('.ght-pr-toolbar-meter__counts')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('1 / 2 viewed');
+    expect(files.querySelector('.ght-pr-toolbar-meter__separator')).toBeNull();
+    expect(files.querySelector('.sr-only')?.textContent).toBe(
+      '1 of 2 files viewed',
+    );
+    expect(
+      files
+        .querySelector('.ght-pr-toolbar-meter__ring-value')
+        ?.getAttribute('stroke-dashoffset'),
+    ).toBe('19');
+    expect(
+      controls
+        .querySelector('[data-ght-pr-metadata="toolbar-lines"] .sr-only')
+        ?.textContent,
+    ).toBe('0 of 7 changes viewed');
+  });
+
+  it.each(commitToolbarFixtures)(
+    'hands file progress back when GitHub adds its meter to the %s toolbar',
+    (_, fixture) => {
+    document.body.innerHTML = fixture;
+    const renderer = new SidebarRenderer({
+      onViewedChange: vi.fn(),
+      onRetry: vi.fn(),
+      onOpenSetup: vi.fn(),
+    });
+    renderer.render(snapshot);
+
+    const controls = document.querySelector<HTMLElement>(FILE_CONTROLS)!;
+    const native = document.createElement('div');
+    native.innerHTML = '<span class="sr-only">1 of 2 files viewed</span>';
+    controls.append(native);
+    renderer.render(snapshot);
+
+    expect(
+      document.querySelector('[data-ght-pr-metadata="toolbar-files"]'),
+    ).toBeNull();
+    expect(
+      document.querySelectorAll('[data-ght-pr-metadata="toolbar-lines"]'),
+    ).toHaveLength(1);
+    expect(
+      native.querySelector('[data-ght-pr-metadata="toolbar-lines"]'),
     ).not.toBeNull();
   });
 

@@ -1,0 +1,44 @@
+<section data-component="Stack" data-direction="horizontal">
+  <h2 class="sr-only">Pull request toolbar</h2>
+  <div data-component="Stack" data-direction="horizontal">
+    <button
+      type="button"
+      data-testid="collapse-file-tree-button"
+      aria-expanded="true"
+      aria-controls="pr-file-tree"
+    >
+      Collapse file tree
+    </button>
+  </div>
+  <div data-component="Stack" data-direction="horizontal">
+    <div class="d-flex PullRequestFilesToolbar-module__file-controls">
+      <div
+        class="d-flex flex-row flex-items-center PullRequestFilesToolbar-module__hide-viewed-progress-on-small"
+      >
+        <svg
+          data-circumference="38"
+          height="16"
+          role="presentation"
+          width="16"
+        >
+          <circle cx="50%" cy="50%" fill="transparent" r="6"></circle>
+        </svg>
+        <span
+          aria-hidden="true"
+          class="ml-1 ViewedFileProgress-module__ProgressContainer"
+        >
+          <span class="ViewedFileProgress-module__FilesCountText">4</span>
+          /
+          <span class="ViewedFileProgress-module__FilesCountText">22</span>
+          <span class="ViewedFileProgress-module__ViewedText">viewed</span>
+        </span>
+        <span class="sr-only">4 of 22 files viewed</span>
+      </div>
+    </div>
+    <div
+      class="PullRequestFilesToolbar-module__file-controls-divider"
+      data-testid="file-controls-divider"
+    ></div>
+    <button type="button" data-variant="primary">Submit review</button>
+  </div>
+</section>

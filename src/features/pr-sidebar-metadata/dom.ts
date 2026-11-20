@@ -3,16 +3,41 @@ import type {
   PullRequestFilesSnapshot,
 } from '../../shared/types';
 import {
+  aggregateFileViewProgress,
   aggregateFolder,
   aggregateLineViewProgress,
   isViewed,
-  lineViewProgressRatio,
-  type LineViewProgress,
+  viewProgressRatio,
+  type ViewProgress,
 } from './model';
 
 const METADATA_ATTRIBUTE = 'data-ght-pr-metadata';
-const TOOLBAR_LINES_VALUE = 'toolbar-lines';
 const VIEWED_ROW_CLASS = 'ght-pr-tree-row--viewed';
+
+interface ToolbarMeter {
+  /** Value of the metadata attribute that marks this meter. */
+  value: string;
+  /** Visible text after the counts. */
+  suffix: string;
+  /** What the counts measure, for screen readers. */
+  noun: string;
+  /** Leading meters go first in the mount and have no separator. */
+  leading: boolean;
+}
+
+/** Stands in for GitHub's own files meter, which commit views leave out. */
+const FILES_METER: ToolbarMeter = {
+  value: 'toolbar-files',
+  suffix: 'viewed',
+  noun: 'files',
+  leading: true,
+};
+const LINES_METER: ToolbarMeter = {
+  value: 'toolbar-lines',
+  suffix: 'changes',
+  noun: 'changes',
+  leading: false,
+};
 const PROGRESS_RING_CIRCUMFERENCE = 38;
 const numberFormatter = new Intl.NumberFormat();
 
@@ -36,7 +61,10 @@ export class SidebarRenderer {
   }
 
   render(snapshot: PullRequestFilesSnapshot): boolean {
-    this.renderToolbarLineProgress(aggregateLineViewProgress(snapshot.files));
+    this.renderToolbarProgress(
+      aggregateFileViewProgress(snapshot.files),
+      aggregateLineViewProgress(snapshot.files),
+    );
 
     const root = document.querySelector<HTMLElement>('#pr-file-tree');
     if (!root) {
@@ -71,7 +99,7 @@ export class SidebarRenderer {
   }
 
   showLoading(): void {
-    this.renderToolbarLineProgress(null);
+    this.renderToolbarProgress(null, null);
     this.showBanner('Loading pull request metadata…', 'loading');
   }
 
@@ -97,33 +125,52 @@ export class SidebarRenderer {
     findDirectMetadata(container)?.remove();
   }
 
-  private renderToolbarLineProgress(
-    progress: LineViewProgress | null,
+  private renderToolbarProgress(
+    files: ViewProgress | null,
+    lines: ViewProgress | null,
   ): void {
-    const mount = findViewedProgressMount();
+    const toolbar = findPullRequestToolbar();
+    if (!toolbar) {
+      return;
+    }
+
+    const nativeFiles = findNativeFileProgress(toolbar);
+    const mount = nativeFiles?.parentElement ?? findFileControls(toolbar);
     if (!mount) {
       return;
     }
 
-    let metadata = mount.querySelector<HTMLElement>(
-      `[${METADATA_ATTRIBUTE}="${TOOLBAR_LINES_VALUE}"]`,
-    );
+    if (nativeFiles) {
+      findToolbarMeter(toolbar, FILES_METER)?.remove();
+    } else {
+      this.renderToolbarMeter(toolbar, mount, FILES_METER, files);
+    }
+    this.renderToolbarMeter(toolbar, mount, LINES_METER, lines);
+  }
+
+  private renderToolbarMeter(
+    toolbar: HTMLElement,
+    mount: HTMLElement,
+    meter: ToolbarMeter,
+    progress: ViewProgress | null,
+  ): void {
+    let metadata = findToolbarMeter(toolbar, meter);
     if (!metadata) {
       metadata = document.createElement('span');
-      metadata.className = 'ght-pr-toolbar-lines';
-      metadata.setAttribute(METADATA_ATTRIBUTE, TOOLBAR_LINES_VALUE);
+      metadata.className = 'ght-pr-toolbar-meter';
+      metadata.setAttribute(METADATA_ATTRIBUTE, meter.value);
       metadata.innerHTML = `
-        <span aria-hidden="true" class="ght-pr-toolbar-lines__visible">
-          <span class="ght-pr-toolbar-lines__separator">·</span>
+        <span aria-hidden="true" class="ght-pr-toolbar-meter__visible">
+          ${meter.leading ? '' : '<span class="ght-pr-toolbar-meter__separator">·</span>'}
           <svg
-            class="ght-pr-toolbar-lines__ring"
+            class="ght-pr-toolbar-meter__ring"
             data-circumference="${PROGRESS_RING_CIRCUMFERENCE}"
             height="16"
             role="presentation"
             width="16"
           >
             <circle
-              class="ght-pr-toolbar-lines__ring-track"
+              class="ght-pr-toolbar-meter__ring-track"
               cx="50%"
               cy="50%"
               fill="transparent"
@@ -131,7 +178,7 @@ export class SidebarRenderer {
               stroke-width="2"
             ></circle>
             <circle
-              class="ght-pr-toolbar-lines__ring-value"
+              class="ght-pr-toolbar-meter__ring-value"
               cx="50%"
               cy="50%"
               fill="transparent"
@@ -142,29 +189,36 @@ export class SidebarRenderer {
               stroke-width="2"
             ></circle>
           </svg>
-          <span class="ght-pr-toolbar-lines__counts">
-            <span class="ght-pr-toolbar-lines__count ght-pr-toolbar-lines__count--viewed"></span>
-            <span class="ght-pr-toolbar-lines__slash"> / </span>
-            <span class="ght-pr-toolbar-lines__count ght-pr-toolbar-lines__count--total"></span>
-            <span class="ght-pr-toolbar-lines__suffix"> changes</span>
+          <span class="ght-pr-toolbar-meter__counts">
+            <span class="ght-pr-toolbar-meter__count ght-pr-toolbar-meter__count--viewed"></span>
+            <span class="ght-pr-toolbar-meter__slash"> / </span>
+            <span class="ght-pr-toolbar-meter__count ght-pr-toolbar-meter__count--total"></span>
+            <span class="ght-pr-toolbar-meter__suffix"> ${meter.suffix}</span>
           </span>
         </span>
         <span class="sr-only"></span>
       `;
-      mount.append(metadata);
+    }
+    // GitHub can add its own meter after ours mounted, which moves the mount.
+    if (metadata.parentElement !== mount) {
+      if (meter.leading) {
+        mount.prepend(metadata);
+      } else {
+        mount.append(metadata);
+      }
     }
 
     const viewedCount = metadata.querySelector<HTMLElement>(
-      '.ght-pr-toolbar-lines__count--viewed',
+      '.ght-pr-toolbar-meter__count--viewed',
     );
     const totalCount = metadata.querySelector<HTMLElement>(
-      '.ght-pr-toolbar-lines__count--total',
+      '.ght-pr-toolbar-meter__count--total',
     );
     const ringValue = metadata.querySelector<SVGCircleElement>(
-      '.ght-pr-toolbar-lines__ring-value',
+      '.ght-pr-toolbar-meter__ring-value',
     );
     const srOnly = metadata.querySelector<HTMLElement>('.sr-only');
-    const ratio = lineViewProgressRatio(progress);
+    const ratio = viewProgressRatio(progress);
     const viewedLabel = progress
       ? numberFormatter.format(progress.viewed)
       : '…';
@@ -189,8 +243,8 @@ export class SidebarRenderer {
       setText(
         srOnly,
         progress
-          ? `${viewedLabel} of ${totalLabel} changes viewed`
-          : 'Line view progress loading',
+          ? `${viewedLabel} of ${totalLabel} ${meter.noun} viewed`
+          : `Viewed ${meter.noun} loading`,
       );
     }
   }
@@ -475,29 +529,58 @@ function findDiffToggle(
   return null;
 }
 
-function findViewedProgressMount(): HTMLElement | null {
-  const toolbar = Array.from(
-    document.querySelectorAll<HTMLElement>('h2.sr-only'),
-  ).find((heading) => heading.textContent?.trim() === 'Pull request toolbar')
-    ?.closest('section');
-  if (!toolbar) {
-    return null;
+function findPullRequestToolbar(): HTMLElement | null {
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>('h2.sr-only'))
+      .find((heading) => heading.textContent?.trim() === 'Pull request toolbar')
+      ?.closest<HTMLElement>('section') ?? null
+  );
+}
+
+/** GitHub's "N of M files viewed" text, which commit and range views omit. */
+function findNativeFileProgress(toolbar: HTMLElement): HTMLElement | null {
+  return (
+    Array.from(toolbar.querySelectorAll<HTMLElement>('.sr-only')).find(
+      (element) =>
+        !element.closest(`[${METADATA_ATTRIBUTE}]`) &&
+        /files viewed/i.test(element.textContent ?? ''),
+    ) ?? null
+  );
+}
+
+/**
+ * The box that holds GitHub's files meter; commit views leave it empty. Its
+ * class is `file-controls__<hash>`, once prefixed `PullRequestFilesToolbar-module__`.
+ */
+function findFileControls(toolbar: HTMLElement): HTMLElement | null {
+  const fileControls = Array.from(
+    toolbar.querySelectorAll<HTMLElement>('[class*="file-controls"]'),
+  ).find((element) =>
+    Array.from(element.classList).some((name) =>
+      /(?:^|__)file-controls(?:__|$)/.test(name),
+    ),
+  );
+  if (fileControls) {
+    return fileControls;
   }
 
-  const fileProgress = Array.from(
-    toolbar.querySelectorAll<HTMLElement>('.sr-only'),
-  ).find((element) => /files viewed/i.test(element.textContent ?? ''));
-  if (fileProgress?.parentElement) {
-    return fileProgress.parentElement;
-  }
-
+  // The button holds both its full and short labels: "Submit reviewReview".
   const reviewButton = Array.from(
     toolbar.querySelectorAll<HTMLButtonElement>('button'),
-  ).find((button) => /^(submit review|review)$/i.test(
-    button.textContent?.trim() ?? '',
-  ));
+  ).find((button) =>
+    /^(submit review|review)/i.test(button.textContent?.trim() ?? ''),
+  );
   const controls = reviewButton?.previousElementSibling;
   return controls instanceof HTMLElement ? controls : null;
+}
+
+function findToolbarMeter(
+  toolbar: HTMLElement,
+  meter: ToolbarMeter,
+): HTMLElement | null {
+  return toolbar.querySelector<HTMLElement>(
+    `[${METADATA_ATTRIBUTE}="${meter.value}"]`,
+  );
 }
 
 function findContentContainer(row: HTMLElement): HTMLElement | null {

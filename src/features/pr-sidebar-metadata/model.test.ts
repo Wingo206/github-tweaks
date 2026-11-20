@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   aggregateFolder,
   applyViewedOverrides,
+  aggregateFileViewProgress,
   aggregateLineViewProgress,
   formatLineViewProgressLabel,
-  lineViewProgressRatio,
   parseChangeSelection,
   parsePullRequestUrl,
   sameChangeSelection,
   updateFileViewedState,
+  viewProgressRatio,
 } from './model';
 import type { PullRequestFilesSnapshot } from '../../shared/types';
 
@@ -113,6 +114,13 @@ describe('pull request sidebar model', () => {
     });
   });
 
+  it('counts viewed files, treating dismissed files as unviewed', () => {
+    expect(aggregateFileViewProgress(snapshot.files)).toEqual({
+      viewed: 1,
+      total: 3,
+    });
+  });
+
   it('formats combined line progress like the native viewed meter', () => {
     expect(formatLineViewProgressLabel({ viewed: 3, total: 12 })).toBe(
       '3 / 12 changes',
@@ -123,10 +131,10 @@ describe('pull request sidebar model', () => {
     expect(formatLineViewProgressLabel(null)).toBe('… / … changes');
   });
 
-  it('maps line progress to a ring fill ratio', () => {
-    expect(lineViewProgressRatio({ viewed: 3, total: 12 })).toBe(0.25);
-    expect(lineViewProgressRatio({ viewed: 0, total: 0 })).toBe(1);
-    expect(lineViewProgressRatio(null)).toBeNull();
+  it('maps progress to a ring fill ratio', () => {
+    expect(viewProgressRatio({ viewed: 3, total: 12 })).toBe(0.25);
+    expect(viewProgressRatio({ viewed: 0, total: 0 })).toBe(1);
+    expect(viewProgressRatio(null)).toBeNull();
   });
 
   it('updates one file without mutating the snapshot', () => {

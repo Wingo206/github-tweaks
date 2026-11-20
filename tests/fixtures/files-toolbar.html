@@ -1,44 +1,34 @@
-<section data-component="Stack" data-direction="horizontal">
+<!-- Captured 2026-11-19 from /pull/<n>/changes. Octicon paths removed; the meter ring is kept. -->
+<section data-side-panel-open="false" data-file-tree-expanded="true" data-component="Stack" class="stickyHeader__OQ39Id toolbar__UgdeAp updatedHeaderToolbar__5Xcutd prc-Stack-Stack-UQ9k6" data-gap="condensed" data-direction="horizontal" data-align="center" data-wrap="nowrap" data-justify="space-between" data-padding="none">
   <h2 class="sr-only">Pull request toolbar</h2>
-  <div data-component="Stack" data-direction="horizontal">
-    <button
-      type="button"
-      data-testid="collapse-file-tree-button"
-      aria-expanded="true"
-      aria-controls="pr-file-tree"
-    >
-      Collapse file tree
-    </button>
+  <div data-component="Stack" class="min-width-0 prc-Stack-Stack-UQ9k6" data-gap="condensed" data-direction="horizontal" data-align="center" data-wrap="nowrap" data-justify="start" data-padding="none">
+    <div>
+      <button data-component="IconButton" type="button" data-testid="file-tree-button" aria-expanded="true" aria-controls="pr-file-tree" class="prc-Button-ButtonBase-9n-Xk RegularTreeToggle__Mndq2_ fgColor-muted prc-Button-IconButton-fyge7" data-size="small" data-variant="invisible" aria-labelledby="_R_4ckpld9d5m5_"><svg class="octicon octicon-list-unordered" aria-hidden="true" width="16" height="16"></svg></button>
+      <span class="prc-TooltipV2-Tooltip-tLeuB" data-component="Tooltip" aria-hidden="true" id="_R_4ckpld9d5m5_" popover="auto">Hide file tree</span>
+    </div>
+    <div class="">
+      <div class="d-none"></div>
+      <button data-component="Button" type="button" class="prc-Button-ButtonBase-9n-Xk hide-icon-on-small__53kfy_" data-size="small" data-variant="invisible" id="changes-selector-button"><span data-component="buttonContent" class="prc-Button-ButtonContent-Iohp5"><span data-component="text" class="prc-Button-Label-FWkx3">All commits</span></span></button>
+    </div>
   </div>
-  <div data-component="Stack" data-direction="horizontal">
-    <div class="d-flex PullRequestFilesToolbar-module__file-controls">
-      <div
-        class="d-flex flex-row flex-items-center PullRequestFilesToolbar-module__hide-viewed-progress-on-small"
-      >
-        <svg
-          data-circumference="38"
-          height="16"
-          role="presentation"
-          width="16"
-        >
-          <circle cx="50%" cy="50%" fill="transparent" r="6"></circle>
+  <div data-component="Stack" class="prc-Stack-Stack-UQ9k6" data-direction="horizontal" data-align="center" data-wrap="nowrap" data-justify="start" data-padding="none">
+    <div class="d-flex file-controls__C6Wwfn">
+      <div class="d-flex flex-row flex-items-center hide-viewed-progress-on-small__u9jCpF">
+        <svg data-circumference="38" height="16" role="presentation" width="16">
+          <circle cx="50%" cy="50%" fill="transparent" r="6" stroke="var(--borderColor-default, var(--color-border-default))" stroke-width="2"></circle>
+          <circle cx="50%" cy="50%" fill="transparent" r="6" stroke="var(--fgColor-done, var(--color-done-fg))" stroke-dasharray="38" stroke-dashoffset="38" stroke-linecap="round" stroke-width="2"></circle>
         </svg>
-        <span
-          aria-hidden="true"
-          class="ml-1 ViewedFileProgress-module__ProgressContainer"
-        >
-          <span class="ViewedFileProgress-module__FilesCountText">4</span>
-          /
-          <span class="ViewedFileProgress-module__FilesCountText">22</span>
-          <span class="ViewedFileProgress-module__ViewedText">viewed</span>
-        </span>
-        <span class="sr-only">4 of 22 files viewed</span>
+        <span aria-hidden="true" class="ml-1 ProgressContainer__b1ofBm"><span class="FilesCountText__QkVEDj">0</span> /<!-- --> <span class="FilesCountText__QkVEDj">153</span> <span class="ViewedText__2SeNUb hide-viewed-text-on-small__2X2eTn">viewed</span></span>
+        <span class="sr-only">0 of 153 files viewed</span>
       </div>
     </div>
-    <div
-      class="PullRequestFilesToolbar-module__file-controls-divider"
-      data-testid="file-controls-divider"
-    ></div>
-    <button type="button" data-variant="primary">Submit review</button>
+    <div class="container-show-on-sm__KdbhTY">
+      <button data-component="IconButton" type="button" aria-haspopup="true" aria-expanded="false" class="prc-Button-ButtonBase-9n-Xk prc-Button-IconButton-fyge7" data-size="small" data-variant="invisible" aria-labelledby="_R_ff6kpld9d5m5_" id="_R_f6kpld9d5m5_"><svg class="octicon octicon-gear" aria-hidden="true" width="16" height="16"></svg></button>
+      <span class="prc-TooltipV2-Tooltip-tLeuB" data-component="Tooltip" aria-hidden="true" id="_R_ff6kpld9d5m5_" popover="auto">Diff settings</span>
+    </div>
+    <div class="show-more-menu-on-small__4l8RVM">
+      <button data-component="IconButton" type="button" aria-haspopup="true" aria-expanded="false" class="prc-Button-ButtonBase-9n-Xk prc-Button-IconButton-fyge7" data-size="small" data-variant="default" aria-labelledby="_R_vmkpld9d5m5_" id="_R_1mkpld9d5m5_"><svg class="octicon octicon-kebab-horizontal" aria-hidden="true" width="16" height="16"></svg></button>
+      <span class="prc-TooltipV2-Tooltip-tLeuB" data-component="Tooltip" aria-hidden="true" id="_R_vmkpld9d5m5_" popover="auto">More options</span>
+    </div>
   </div>
 </section>

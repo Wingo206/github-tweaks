@@ -12,7 +12,7 @@ export interface FolderAggregate {
   total: number;
 }
 
-export interface LineViewProgress {
+export interface ViewProgress {
   viewed: number;
   total: number;
 }
@@ -43,10 +43,19 @@ export function aggregateFolder(
   );
 }
 
+export function aggregateFileViewProgress(
+  files: PullRequestFile[],
+): ViewProgress {
+  return {
+    viewed: files.filter((file) => isViewed(file.viewedState)).length,
+    total: files.length,
+  };
+}
+
 export function aggregateLineViewProgress(
   files: PullRequestFile[],
-): LineViewProgress {
-  return files.reduce<LineViewProgress>(
+): ViewProgress {
+  return files.reduce<ViewProgress>(
     (aggregate, file) => {
       const lines = file.additions + file.deletions;
       return {
@@ -58,8 +67,8 @@ export function aggregateLineViewProgress(
   );
 }
 
-export function lineViewProgressRatio(
-  progress: LineViewProgress | null,
+export function viewProgressRatio(
+  progress: ViewProgress | null,
 ): number | null {
   if (!progress) {
     return null;
@@ -71,7 +80,7 @@ export function lineViewProgressRatio(
 }
 
 export function formatLineViewProgressLabel(
-  progress: LineViewProgress | null,
+  progress: ViewProgress | null,
   formatNumber: (value: number) => string = String,
 ): string {
   if (!progress) {
